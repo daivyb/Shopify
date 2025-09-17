@@ -10,7 +10,7 @@ function getSheetData() {
   const headers = values[0].map(h => h.toString().trim().replace(/\s+/g, ''));
 
   const data = values.slice(1).map((row, index) => {
-    let obj = { rowI1ndex: index + 2 };
+    let obj = { rowIndex: index + 2 };
     row.forEach((val, i) => {
       obj[headers[i]] = val.toString().trim();
     });
