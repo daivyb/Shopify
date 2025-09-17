@@ -57,6 +57,7 @@ function processGroupedOrders() {
       const itemNames = orderData.items.map(item => item.title).join(", ");
       Logger.log(`Orden ${orderName} creada con los siguientes items: ${itemNames}`);
       orderData.rowIndexes.forEach(rowIndex => {
+        Logger.log(`Attempting to update row: ${rowIndex}, statusCol: ${statusOrderCol}, orderCol: ${orderCol}`);
         sheet.getRange(rowIndex, statusOrderCol).setValue("Created");
         sheet.getRange(rowIndex, orderCol).setValue(orderName);
       });
