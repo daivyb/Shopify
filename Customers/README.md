@@ -4,7 +4,7 @@
 
 Este proyecto de Google Apps Script automatiza la clasificación y etiquetado de correos electrónicos en Gmail utilizando la API de Gemini. Está diseñado para el equipo de atención al cliente de "Algae Cooking Club" para ayudar a gestionar las consultas y quejas de los clientes de manera más eficiente.
 
-El script lee los correos electrónicos no etiquetados, los en1vía a Gemini para su clasificación y luego aplica las etiquetas correspondientes en Gmail según la respuesta del modelo.
+El script lee los correos electrónicos no etiquetados, los envía a Gemini para su clasificación y luego aplica las etiquetas correspondientes en Gmail según la respuesta del modelo.
 
 ## Características
 

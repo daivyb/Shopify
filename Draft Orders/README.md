@@ -15,7 +15,7 @@ El script lee filas de una hoja de cálculo, busca los IDs de las variantes de p
 
 ## ¿Cómo funciona?
 
-1.  El script se ejecuta manualmente desde el editor de Google Apps Script.
+1.  El script se ejecuta manualmente/trigger desde el editor de Google Apps Script.
 2.  Lee los datos de una hoja de cálculo de Google especificada (`sheetRead.js`).
 3.  Para cada artículo, obtiene el ID de la variante de Shopify usando la función `getVariantID.js`.
 4.  Crea un borrador de pedido individual (`singleDraft.js`) o un borrador de pedido agrupado para un cliente (`placeGroupedDraft.js`).
