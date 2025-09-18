@@ -63,7 +63,7 @@ Your Google Sheet must have the following headers:
 
 ## File Descriptions
 
-- **`Code.js`**: The main file that triggers the order creation process.
+- **`Execution.js`**: The main file that triggers the order creation process.
 - **`sheetRead.js`**: Handles reading and parsing the data from the Google Sheet, including row indexes, and filters rows based on "Status Order". Includes logging for debugging.
 - **`placeGroupedOrders.js`**: Contains the logic for grouping orders, calling `createOrder`, and updating the sheet after creation. Includes logging for debugging `getRange` errors.
 - **`createOrder.js`**: Responsible for making the API call to Shopify to create a single order using the `orderCreate` mutation. It includes customer, address (with company), line items, financial status, note, and a shipping line. It returns the order name on success.
