@@ -54,16 +54,23 @@ function getClassificationLabel(thread, tagReferences) {
 }
 
 /**
- * Extrae el cuerpo del PRIMER mensaje de un hilo, limitado a 1024 caracteres.
+ * Extrae los detalles (remitente, cuerpo) del PRIMER mensaje de un hilo.
  * @param {GoogleAppsScript.Gmail.GmailThread} thread El hilo de Gmail.
- * @returns {string} El cuerpo del mensaje en texto plano.
+ * @returns {{from: string, body: string}|null} Un objeto con el remitente y el cuerpo del mensaje.
  */
-function getFirstMessageBody(thread) {
-  // Obtenemos el primer mensaje del hilo (índice 0)
+function getFirstMessageDetails(thread) {
   const message = thread.getMessages()[0];
+  if (!message) return null;
+
+  const from = message.getFrom(); // Extrae el remitente, ej: "John Doe <john.doe@example.com>"
+  const emailRegex = /<(.+)>/;
+  const match = from.match(emailRegex);
+  const senderEmail = match ? match[1] : from; // Extrae solo la dirección de email
+
   const fullBody = message.getPlainBody();
-  // Limita el cuerpo a los primeros 1024 caracteres para optimizar
-  return fullBody.substring(0, 1024);
+  const body = fullBody.substring(0, 1024); // Limita para optimizar
+
+  return { from: senderEmail, body: body };
 }
 
 /**

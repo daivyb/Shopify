@@ -34,10 +34,17 @@ function createDraftReplies() {
       return;
     }
 
-    const emailBody = getFirstMessageBody(thread);
+    const messageDetails = getFirstMessageDetails(thread);
+    if (!messageDetails) {
+      Logger.log(`No se pudieron obtener los detalles del mensaje para el hilo ${threadId}.`);
+      return;
+    }
+
+    // Buscar al cliente en Shopify para personalizar el mensaje
+    const customer = getCustomerDetails(messageDetails.from);
     
     // Construir el prompt para Gemini
-    const prompt = buildPromptForBestResponse(emailBody, allTemplates);
+    const prompt = buildPromptForBestResponse(messageDetails.body, allTemplates);
 
     // Obtener la mejor respuesta de Gemini
     const geminiChoice = getGeminiResponse(prompt);
@@ -56,7 +63,7 @@ function createDraftReplies() {
 
     Logger.log(`Plantilla seleccionada por Gemini: ${geminiChoice}`);
 
-    const personalizedMessage = personalizeTemplate(selectedTemplate, emailBody);
+    const personalizedMessage = personalizeTemplate(selectedTemplate, messageDetails.body, customer);
     createDraftReply(threadId, personalizedMessage);
     applyProcessedLabel(threadId);
     

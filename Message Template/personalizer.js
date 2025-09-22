@@ -9,24 +9,28 @@
  * @param {string} emailBody El cuerpo del correo electrónico en texto plano.
  * @returns {string} La plantilla personalizada.
  */
-function personalizeTemplate(template, emailBody) {
+function personalizeTemplate(template, emailBody, customer) {
   let personalizedText = template;
 
-  // Extraer datos del correo usando expresiones regulares (regex).
-  // Esta es una implementación básica. Se puede mejorar para ser más precisa.
+  // Usar el nombre del cliente de Shopify si existe, si no, intentar extraerlo del correo.
+  const customerName = customer ? customer.first_name : extractCustomerName(emailBody);
 
   const data = {
-    'customer_name': extractCustomerName(emailBody) || 'cliente',
+    'customer_name': customerName, // Sin fallback, puede ser null
     // Añadir más extracciones aquí, por ejemplo:
-    // 'order_id': extractOrderId(emailBody) || '[NÚMERO DE ORDEN]',
+    // 'order_id': extractOrderId(emailBody),
   };
 
-  // Reemplazar cada placeholder con su valor correspondiente.
+  // Reemplazar cada placeholder SOLO si se encontró un valor para él.
   for (const key in data) {
     const placeholder = `{{${key}}}`;
     const value = data[key];
-    // Usamos una expresión regular global para reemplazar todas las ocurrencias.
-    personalizedText = personalizedText.replace(new RegExp(placeholder, 'g'), value);
+    
+    // Condición clave: solo reemplazar si el valor no es nulo o vacío.
+    if (value) {
+      // Usamos una expresión regular global para reemplazar todas las ocurrencias.
+      personalizedText = personalizedText.replace(new RegExp(placeholder, 'g'), value);
+    }
   }
 
   return personalizedText;
