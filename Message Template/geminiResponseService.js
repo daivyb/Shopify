@@ -5,7 +5,7 @@
 // --- CONFIGURACIÓN ---
 // ¡IMPORTANTE! Guarda este valor en Script Properties (Archivo > Propiedades del proyecto > Propiedades del script).
 const GEMINI_API_KEY = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
-const GEMINI_MODEL = 'gemini-1.5-pro'; // O el modelo que prefieras usar
+const GEMINI_MODEL = 'gemini-2.5-flash'; // O el modelo que prefieras usar
 
 /**
  * Llama a la API de Gemini para obtener una respuesta basada en un prompt.

@@ -47,3 +47,44 @@ function getCustomerDetails(email) {
     return null;
   }
 }
+
+/**
+ * Busca los detalles del último pedido de un cliente en Shopify.
+ * @param {string} customerId El ID del cliente en Shopify.
+ * @returns {Object|null} Un objeto con los datos del último pedido o null si no se encuentra.
+ */
+function getCustomerLatestOrderDetails(customerId) {
+  if (!SHOPIFY_API_ACCESS_TOKEN || !SHOPIFY_SHOP_URL) {
+    Logger.log('Error: Las credenciales de la API de Shopify no están configuradas en las Script Properties.');
+    return null;
+  }
+
+  // La URL para buscar los últimos pedidos de un cliente
+  const apiUrl = `https://${SHOPIFY_SHOP_URL}/admin/api/2023-10/customers/${customerId}/orders.json?status=any&limit=1&order=created_at+desc`;
+
+  const options = {
+    'method': 'get',
+    'contentType': 'application/json',
+    'headers': {
+      'X-Shopify-Access-Token': SHOPIFY_API_ACCESS_TOKEN,
+    }
+  };
+
+  try {
+    const response = UrlFetchApp.fetch(apiUrl, options);
+    const jsonResponse = JSON.parse(response.getContentText());
+    
+    if (jsonResponse.orders && jsonResponse.orders.length > 0) {
+      const latestOrder = jsonResponse.orders[0];
+      Logger.log(`Último pedido encontrado para el cliente ${customerId}: ${latestOrder.order_number}`);
+      return latestOrder;
+    } else {
+      Logger.log(`No se encontraron pedidos para el cliente con ID: ${customerId}`);
+      return null;
+    }
+  } catch (e) {
+    Logger.log(`Error al conectar con la API de Shopify para obtener pedidos: ${e.toString()}`);
+    return null;
+  }
+}
+
