@@ -32,8 +32,8 @@ function personalizeTemplate(template, emailBody, customer, latestOrder) {
     'delivery_address': latestOrder && latestOrder.shipping_address ? formatAddress(latestOrder.shipping_address) : null,
     'delivery_delay_days': calculateDeliveryDelay(latestOrder), // Requires a new helper function
     'product_details': latestOrder ? formatProductDetails(latestOrder.line_items) : null, // Requires a new helper function
-    'product_quantity': latestOrder && latestOrder.line_items && latestOrder.line_items.length > 0 ? latestOrder.line_items[0].quantity : null, // Assuming first item for simplicity
-    'product_name': latestOrder && latestOrder.line_items && latestOrder.line_items.length > 0 ? latestOrder.line_items[0].name : null, // Assuming first item for simplicity
+    'product_quantity': latestOrder && latestOrder.line_items && latestOrder.line_items.length > 0 ? latestOrder.line_items.map(item => item.quantity).join(', ') : null,
+    'product_name': latestOrder && latestOrder.line_items && latestOrder.line_items.length > 0 ? latestOrder.line_items.map(item => item.name).join(', ') : null,
   };
 
   // Reemplazar cada placeholder SOLO si se encontró un valor para él.
