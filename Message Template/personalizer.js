@@ -24,7 +24,7 @@ function personalizeTemplate(template, emailBody, customer, latestOrder) {
     'tracking_url': latestOrder && latestOrder.fulfillments && latestOrder.fulfillments.length > 0 && latestOrder.fulfillments[0].tracking_url ? latestOrder.fulfillments[0].tracking_url : null,
     'order_items': latestOrder ? formatOrderItems(latestOrder.line_items) : null,
     // New placeholders for Shipping Issue
-    'delivery_status': latestOrder && latestOrder.fulfillments && latestOrder.fulfillments.length > 0 && latestOrder.fulfillments[0].delivery_status ? latestOrder.fulfillments[0].delivery_status : null,
+    'delivery_status': latestOrder && latestOrder.fulfillments && latestOrder.fulfillments.length > 0 && latestOrder.fulfillments[0].shipment_status ? latestOrder.fulfillments[0].shipment_status : null,
     'carrier_name': latestOrder && latestOrder.fulfillments && latestOrder.fulfillments.length > 0 && latestOrder.fulfillments[0].tracking_company ? latestOrder.fulfillments[0].tracking_company : null,
     'expected_delivery_date': latestOrder && latestOrder.fulfillments && latestOrder.fulfillments.length > 0 && latestOrder.fulfillments[0].estimated_delivery_at ? new Date(latestOrder.fulfillments[0].estimated_delivery_at).toLocaleDateString() : null,
     'delivery_location': latestOrder && latestOrder.shipping_address && latestOrder.shipping_address.address1 ? latestOrder.shipping_address.address1 : null, // Assuming address1 is sufficient for location

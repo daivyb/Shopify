@@ -4,12 +4,20 @@ El script sigue un proceso automatizado y optimizado:
 
 1.  **Búsqueda Selectiva**: Encuentra correos con la etiqueta `GeminiLabeled` que hayan sido recibidos **a partir del día actual**, ignorando correos antiguos. Además, excluye los que ya tienen la etiqueta `GeminiMessage` para no procesarlos dos veces.
 2.  **Clasificación**: Lee la etiqueta de categoría del correo (ej. `Complaint/Shipping Issue`).
-3.  **Extracción de Contenido**: **Toma** el hilo de correo y lee únicamente el **primer mensaje**, truncándolo a **1024 caracteres**. **Envía** este texto truncado para su posterior análisis.
-4.  **Consulta a Notion**: **Toma** la categoría identificada del correo. **Envía** una consulta a Notion para obtener **todas** las plantillas de respuesta disponibles para esa categoría.
-5.  **Selección con IA**: **Toma** el texto extraído del correo y las plantillas candidatas de Notion. **Envía** ambos a la API de Gemini, solicitando que elija la plantilla más apropiada. **Recibe** la plantilla seleccionada por la IA.
-6.  **Personalización**: **Toma** la plantilla seleccionada por la IA y los datos relevantes del correo (ej. `{{customer_name}}`). Para una personalización más completa (ej. incluir nombre del cliente, número de pedido, detalles de seguimiento), es crucial **enviar** a Gemini o a la lógica de personalización datos estructurados adicionales del cliente y del pedido (ej. obtenidos de Shopify). Esto permite reemplazar los placeholders de manera más efectiva y generar una respuesta final rica en detalles.
-7.  **Creación de Borrador**: Genera un borrador de respuesta en el hilo de correo original.
-8.  **Etiquetado Final**: Aplica la etiqueta `GeminiMessage` para marcar el hilo como procesado.
+3.  **Extracción de Contenido**: **Toma** el hilo de correo y lee únicamente el **primer mensaje**, truncándolo a **1024 caracteres**.
+4.  **Consulta a Notion**: **Toma** la categoría identificada del correo y consulta la base de datos de Notion para obtener **todas** las plantillas de respuesta disponibles para esa categoría.
+5.  **Enriquecimiento de Datos**: Busca al cliente en Shopify usando su email. Si se encuentra, obtiene los detalles de su **último pedido**, incluyendo el estado de preparación (`fulfillment_status`) y, más importante, los datos de envío del paquete (`fulfillment`).
+6.  **Selección con IA (Contexto Mejorado)**: Se construye un prompt para Gemini que incluye:
+    *   El cuerpo del correo del cliente.
+    *   Las plantillas candidatas de Notion.
+    *   **Información crucial del pedido de Shopify**:
+        *   **Estado Detallado del Envío**: El estado real del paquete (`shipment_status`, ej: `in_transit`, `delivered`, `failure`).
+        *   **Transportista**: El nombre de la empresa de paquetería.
+        *   **Número de Seguimiento**.
+    *   Esta información detallada es **esencial** para que Gemini pueda distinguir entre escenarios complejos (ej. un paquete demorado vs. uno marcado como entregado pero no recibido) y elija la plantilla más adecuada.
+7.  **Personalización**: Una vez que Gemini selecciona la mejor plantilla, el script reemplaza los placeholders (ej. `{{customer_name}}`, `{{tracking_number}}`) usando los datos de Shopify obtenidos previamente.
+8.  **Creación de Borrador**: Genera un borrador de respuesta en el hilo de correo original con el mensaje ya personalizado.
+9.  **Etiquetado Final**: Aplica la etiqueta `GeminiMessage` para marcar el hilo como procesado.
 
 ## 6. Plantillas de Respuesta con Placeholders (Ejemplos)
 

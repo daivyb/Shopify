@@ -108,24 +108,24 @@ function buildPromptForBestResponse(emailBody, allTemplates, customer, latestOrd
     orderInfo += `Número de Pedido: ${latestOrder.order_number || 'N/A'}\n`;
     orderInfo += `Fecha del Pedido: ${latestOrder.created_at ? new Date(latestOrder.created_at).toLocaleDateString() : 'N/A'}\n`;
     orderInfo += `Estado Financiero: ${latestOrder.financial_status || 'N/A'}\n`;
-    orderInfo += `Estado de Cumplimiento: ${latestOrder.fulfillment_status || 'N/A'}\n`;
-    orderInfo += `Estado de Entrega: ${latestOrder.fulfillment_status === 'fulfilled' ? 'Entregado' : 'No Entregado'}\n`;
+    orderInfo += `Estado de Preparación (Fulfillment): ${latestOrder.fulfillment_status || 'N/A'}\n`;
+
+    // Lógica mejorada para el estado de la entrega
+    if (latestOrder.fulfillments && latestOrder.fulfillments.length > 0) {
+      const firstFulfillment = latestOrder.fulfillments[0];
+      orderInfo += `Estado Detallado del Envío: ${firstFulfillment.shipment_status || 'Pendiente'}\n`;
+      orderInfo += `Transportista: ${firstFulfillment.tracking_company || 'N/A'}\n`;
+      orderInfo += `Número de Seguimiento: ${firstFulfillment.tracking_number || 'N/A'}\n`;
+      orderInfo += `URL de Seguimiento: ${firstFulfillment.tracking_url || 'N/A'}\n`;
+    } else {
+      orderInfo += `Estado Detallado del Envío: No Enviado\n`;
+    }
+
     // Añadir detalles de los productos en el pedido si es necesario
     if (latestOrder.line_items && latestOrder.line_items.length > 0) {
       orderInfo += `Productos:\n`;
       latestOrder.line_items.forEach(item => {
         orderInfo += `  - ${item.quantity} x ${item.name} (SKU: ${item.sku || 'N/A'})\n`;
-      });
-    }
-    // Añadir tracking number si está disponible en el pedido
-    if (latestOrder.fulfillments && latestOrder.fulfillments.length > 0) {
-      latestOrder.fulfillments.forEach(fulfillment => {
-        if (fulfillment.tracking_number) {
-          orderInfo += `Número de Seguimiento: ${fulfillment.tracking_number}\n`;
-        }
-        if (fulfillment.tracking_url) {
-          orderInfo += `URL de Seguimiento: ${fulfillment.tracking_url}\n`;
-        }
       });
     }
   }
