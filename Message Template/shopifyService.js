@@ -77,6 +77,16 @@ function getCustomerLatestOrderDetails(customerId) {
     if (jsonResponse.orders && jsonResponse.orders.length > 0) {
       const latestOrder = jsonResponse.orders[0];
       Logger.log(`Último pedido encontrado para el cliente ${customerId}: ${latestOrder.order_number}`);
+      
+      if (latestOrder.fulfillments && latestOrder.fulfillments.length > 0) {
+        const fulfillment = latestOrder.fulfillments[0];
+        const deliveryDate = getDeliveryDateFromFulfillmentEvents(latestOrder.id, fulfillment.id);
+        if (deliveryDate) {
+          // Inyectamos la fecha de entrega en el objeto para que personalizer.js la pueda usar.
+          fulfillment.delivered_at = deliveryDate;
+        }
+      }
+      
       return latestOrder;
     } else {
       Logger.log(`No se encontraron pedidos para el cliente con ID: ${customerId}`);
@@ -88,3 +98,42 @@ function getCustomerLatestOrderDetails(customerId) {
   }
 }
 
+/**
+ * Obtiene los eventos de un fulfillment y busca la fecha de entrega.
+ * @param {string} orderId El ID del pedido.
+ * @param {string} fulfillmentId El ID del fulfillment.
+ * @returns {string|null} La fecha de entrega en formato ISO o null.
+ */
+function getDeliveryDateFromFulfillmentEvents(orderId, fulfillmentId) {
+  if (!SHOPIFY_API_ACCESS_TOKEN || !SHOPIFY_SHOP_URL) {
+    Logger.log('Error: Credenciales de API no configuradas.');
+    return null;
+  }
+
+  const apiUrl = `https://${SHOPIFY_SHOP_URL}/admin/api/2023-10/orders/${orderId}/fulfillments/${fulfillmentId}/events.json`;
+  const options = {
+    'method': 'get',
+    'contentType': 'application/json',
+    'headers': {
+      'X-Shopify-Access-Token': SHOPIFY_API_ACCESS_TOKEN,
+    }
+  };
+
+  try {
+    const response = UrlFetchApp.fetch(apiUrl, options);
+    const jsonResponse = JSON.parse(response.getContentText());
+    
+    if (jsonResponse.fulfillment_events && jsonResponse.fulfillment_events.length > 0) {
+      const deliveredEvent = jsonResponse.fulfillment_events.find(event => event.status === 'delivered');
+      if (deliveredEvent) {
+        Logger.log(`Evento 'delivered' encontrado. Fecha: ${deliveredEvent.happened_at}`);
+        return deliveredEvent.happened_at;
+      }
+    }
+    Logger.log('No se encontró evento de "delivered" para el fulfillment.');
+    return null;
+  } catch (e) {
+    Logger.log(`Error al obtener los eventos de fulfillment: ${e.toString()}`);
+    return null;
+  }
+}

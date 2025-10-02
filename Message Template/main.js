@@ -19,59 +19,101 @@ function createDraftReplies() {
 
   threads.forEach(thread => {
     const threadId = thread.getId();
-    Logger.log(`Procesando hilo: ${threadId}`);
+    const messageDetails = getFirstMessageDetails(thread); // Get details early for logging
+
+    // --- Start of structured log entry ---
+    Logger.log('--------------------------------------------------');
+    Logger.log(`[INICIO] Procesando Hilo ID: ${threadId}`);
+    
+    if (messageDetails) {
+        Logger.log(`  > De: ${messageDetails.from}`);
+        Logger.log(`  > Asunto: ${messageDetails.subject}`);
+    } else {
+      Logger.log(`No se pudieron obtener los detalles del mensaje para el hilo ${threadId}. Omitiendo.`);
+      Logger.log(`[FIN] Hilo ID: ${threadId} (Error)`);
+      Logger.log('--------------------------------------------------');
+      return;
+    }
 
     const classificationLabel = getClassificationLabel(thread, tagReferences);
     if (!classificationLabel) {
-      Logger.log(`El hilo ${threadId} no tiene una etiqueta de clasificación válida. Omitiendo.`);
-      return; // Continúa con el siguiente hilo
+      Logger.log(`  > Advertencia: El hilo no tiene una etiqueta de clasificación válida. Omitiendo.`);
+      Logger.log(`[FIN] Hilo ID: ${threadId} (Omitido)`);
+      Logger.log('--------------------------------------------------');
+      return;
     }
-    Logger.log(`Etiqueta de clasificación encontrada: ${classificationLabel}`);
+    Logger.log(`  > Clasificación: ${classificationLabel}`);
 
     const allTemplates = getAllTemplatesForLabel(classificationLabel);
     if (!allTemplates) {
-      Logger.log(`No se encontraron plantillas en Notion para el label '${classificationLabel}'.`);
+      Logger.log(`  > Error: No se encontraron plantillas en Notion para la clasificación.`);
+      Logger.log(`[FIN] Hilo ID: ${threadId} (Error)`);
+      Logger.log('--------------------------------------------------');
       return;
     }
 
-    const messageDetails = getFirstMessageDetails(thread);
-    if (!messageDetails) {
-      Logger.log(`No se pudieron obtener los detalles del mensaje para el hilo ${threadId}.`);
-      return;
-    }
-
-    // Buscar al cliente en Shopify para personalizar el mensaje
+    // Customer and Order Info
     const customer = getCustomerDetails(messageDetails.from);
     let latestOrder = null;
     if (customer && customer.id) {
       latestOrder = getCustomerLatestOrderDetails(customer.id);
     }
+
+    if (latestOrder) {
+        Logger.log(`  > Cliente: ${customer.first_name || ''} ${customer.last_name || ''} (ID: ${customer.id})`);
+        Logger.log(`  > Pedido: #${latestOrder.order_number}`);
+
+        if (latestOrder.fulfillments && latestOrder.fulfillments.length > 0) {
+            const fulfillment = latestOrder.fulfillments[0];
+            const expectedDate = fulfillment.estimated_delivery_at ? new Date(fulfillment.estimated_delivery_at).toLocaleDateString() : 'N/A';
+            const deliveryDate = fulfillment.delivered_at ? new Date(fulfillment.delivered_at).toLocaleDateString() : 'N/A';
+            const delayDays = calculateDeliveryDelay(latestOrder);
+            const sinceDeliveryDays = calculateDaysSinceDelivery(latestOrder);
+
+            Logger.log(`  > Info Envío:`);
+            Logger.log(`    - Promesa de Entrega - Carrier: ${expectedDate}`);
+            Logger.log(`    - Fecha de Entrega: ${deliveryDate}`);
+            if (delayDays !== null) {
+                Logger.log(`    - Retraso (días): ${delayDays}`);
+            }
+            if (sinceDeliveryDays !== null) {
+                Logger.log(`    - Días Transcurridos: ${sinceDeliveryDays}`);
+            }
+        }
+    } else if (customer) {
+        Logger.log(`  > Cliente: ${customer.first_name || ''} ${customer.last_name || ''} (Sin pedidos recientes)`);
+    } else {
+        Logger.log(`  > Cliente: No encontrado en Shopify.`);
+    }
     
-    // Construir el prompt para Gemini
+    // Build prompt and get Gemini response
     const prompt = buildPromptForBestResponse(messageDetails.body, allTemplates, customer, latestOrder);
-
-    // Obtener la mejor respuesta de Gemini
     const geminiChoice = getGeminiResponse(prompt);
+
     if (!geminiChoice) {
-      Logger.log('No se pudo obtener una respuesta de Gemini o la respuesta fue inválida.');
+      Logger.log('  > Error: No se pudo obtener una respuesta válida de Gemini.');
+      Logger.log(`[FIN] Hilo ID: ${threadId} (Error)`);
+      Logger.log('--------------------------------------------------');
       return;
     }
+    Logger.log(`  > Decisión de Gemini: ${geminiChoice}`);
 
-    // Parsear la respuesta de Gemini para obtener el texto de la plantilla
+    // Personalize and create draft
     const selectedTemplate = findTemplateFromGeminiChoice(geminiChoice, allTemplates);
-
     if (!selectedTemplate) {
-      Logger.log(`La elección de Gemini (${geminiChoice}) no corresponde a ninguna plantilla conocida.`);
+      Logger.log(`  > Error: La elección de Gemini (${geminiChoice}) no corresponde a ninguna plantilla.`);
+      Logger.log(`[FIN] Hilo ID: ${threadId} (Error)`);
+      Logger.log('--------------------------------------------------');
       return;
     }
-
-    Logger.log(`Plantilla seleccionada por Gemini: ${geminiChoice}`);
 
     const personalizedMessage = personalizeTemplate(selectedTemplate, messageDetails.body, customer, latestOrder);
     createDraftReply(threadId, personalizedMessage);
     applyProcessedLabel(threadId);
     
-    Logger.log(`Proceso completado para el hilo: ${threadId}`);
+    Logger.log(`  > Acción: Borrador creado con la plantilla "${geminiChoice}".`);
+    Logger.log(`[FIN] Hilo ID: ${threadId}`);
+    Logger.log('--------------------------------------------------');
   });
 
   Logger.log('Proceso de creación de borradores finalizado.');
@@ -121,6 +163,17 @@ function buildPromptForBestResponse(emailBody, allTemplates, customer, latestOrd
       orderInfo += `Estado Detallado del Envío: No Enviado\n`;
     }
 
+    // Calcular y añadir datos de tiempo para dar más contexto a la IA
+    const deliveryDelayDays = calculateDeliveryDelay(latestOrder);
+    if (deliveryDelayDays !== null) {
+      orderInfo += `Días de Retraso en la Entrega (vs. estimado): ${deliveryDelayDays}\n`;
+    }
+
+    const daysSinceDelivery = calculateDaysSinceDelivery(latestOrder);
+    if (daysSinceDelivery !== null) {
+      orderInfo += `Días Transcurridos Desde la Entrega: ${daysSinceDelivery}\n`;
+    }
+
     // Añadir detalles de los productos en el pedido si es necesario
     if (latestOrder.line_items && latestOrder.line_items.length > 0) {
       orderInfo += `Productos:\n`;
@@ -130,9 +183,7 @@ function buildPromptForBestResponse(emailBody, allTemplates, customer, latestOrd
     }
   }
 
-  return `Analiza el siguiente correo electrónico de un cliente y elige la plantilla de respuesta más adecuada de la lista proporcionada. Responde únicamente con el ID de la plantilla seleccionada (por ejemplo, "Pedido perdido::Respuesta_A").\n\n---
-CORREO DEL CLIENTE ---\n${emailBody}\n${customerInfo}\n${orderInfo}\n\n---
-PLANTILLAS DISPONIBLES ---\n${optionsText}`;
+  return `Analiza el siguiente correo electrónico de un cliente y elige la plantilla de respuesta más adecuada de la lista proporcionada. Responde únicamente con el ID de la plantilla seleccionada (por ejemplo, "Pedido perdido::Respuesta_A").\n\n---\nCORREO DEL CLIENTE ---\n${emailBody}\n${customerInfo}\n${orderInfo}\n\n---\nPLANTILLAS DISPONIBLES ---\n${optionsText}`;
 }
 
 /**

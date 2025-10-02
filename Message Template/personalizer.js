@@ -30,7 +30,8 @@ function personalizeTemplate(template, emailBody, customer, latestOrder) {
     'delivery_location': latestOrder && latestOrder.shipping_address && latestOrder.shipping_address.address1 ? latestOrder.shipping_address.address1 : null, // Assuming address1 is sufficient for location
     'delivery_date': latestOrder && latestOrder.fulfillments && latestOrder.fulfillments.length > 0 && latestOrder.fulfillments[0].delivered_at ? new Date(latestOrder.fulfillments[0].delivered_at).toLocaleDateString() : null,
     'delivery_address': latestOrder && latestOrder.shipping_address ? formatAddress(latestOrder.shipping_address) : null,
-    'delivery_delay_days': calculateDeliveryDelay(latestOrder), // Requires a new helper function
+    'delivery_delay_days': calculateDeliveryDelay(latestOrder),
+    'days_since_delivery': calculateDaysSinceDelivery(latestOrder), // New placeholder
     'product_details': latestOrder ? formatProductDetails(latestOrder.line_items) : null, // Requires a new helper function
     'product_quantity': latestOrder && latestOrder.line_items && latestOrder.line_items.length > 0 ? latestOrder.line_items.map(item => item.quantity).join(', ') : null,
     'product_name': latestOrder && latestOrder.line_items && latestOrder.line_items.length > 0 ? latestOrder.line_items.map(item => item.name).join(', ') : null,
@@ -107,10 +108,34 @@ function formatAddress(address) {
 function calculateDeliveryDelay(order) {
   if (!order || !order.fulfillments || order.fulfillments.length === 0) return null;
   const fulfillment = order.fulfillments[0];
-  if (fulfillment.status === 'delivered' && fulfillment.delivered_at && fulfillment.estimated_delivery_at) {
+  if (fulfillment.shipment_status === 'delivered' && fulfillment.delivered_at && fulfillment.estimated_delivery_at) {
     const deliveredDate = new Date(fulfillment.delivered_at);
     const estimatedDate = new Date(fulfillment.estimated_delivery_at);
     const diffTime = Math.abs(deliveredDate - estimatedDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  }
+  return null;
+}
+
+/**
+ * Calculates the number of days that have passed since the order was delivered.
+ * @param {Object} order The Shopify order object.
+ * @returns {number|null} The number of days since delivery or null.
+ */
+function calculateDaysSinceDelivery(order) {
+  if (!order || !order.fulfillments || order.fulfillments.length === 0) return null;
+  const fulfillment = order.fulfillments[0];
+
+  if (fulfillment.shipment_status === 'delivered' && fulfillment.delivered_at) {
+    const deliveredDate = new Date(fulfillment.delivered_at);
+    const today = new Date();
+    
+    // Reset time part to compare days accurately
+    deliveredDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+
+    const diffTime = today - deliveredDate;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
   }

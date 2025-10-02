@@ -14,6 +14,8 @@ El script sigue un proceso automatizado y optimizado:
         *   **Estado Detallado del Envío**: El estado real del paquete (`shipment_status`, ej: `in_transit`, `delivered`, `failure`).
         *   **Transportista**: El nombre de la empresa de paquetería.
         *   **Número de Seguimiento**.
+        *   **Días de Retraso**: Diferencia en días entre la entrega real y la estimada.
+        *   **Días Transcurridos desde la Entrega**: Días que han pasado desde que el paquete se marcó como entregado.
     *   Esta información detallada es **esencial** para que Gemini pueda distinguir entre escenarios complejos (ej. un paquete demorado vs. uno marcado como entregado pero no recibido) y elija la plantilla más adecuada.
 7.  **Personalización**: Una vez que Gemini selecciona la mejor plantilla, el script reemplaza los placeholders (ej. `{{customer_name}}`, `{{tracking_number}}`) usando los datos de Shopify obtenidos previamente.
 8.  **Creación de Borrador**: Genera un borrador de respuesta en el hilo de correo original con el mensaje ya personalizado.
@@ -194,7 +196,7 @@ Hi {{customer_name}},
 Thank you for reaching out. I'm sorry to hear about the issue with your order {{order_id}}, but rest assured, we’ll work to resolve this.
 I’ve checked the tracking number ({{carrier_name}} {{tracking_number}}), and it shows that the package was delivered to {{delivery_location}} on {{delivery_date}} in {{delivery_address}}.
 
-Could it be that a family member or neighbor received the package on your behalf? Sometimes, {{carrier_name}} marks a package as delivered a bit early, and it arrives within the next 24 hours. {{delivery_delay_days}}.
+Could it be that a family member or neighbor received the package on your behalf? Sometimes, {{carrier_name}} marks a package as delivered a bit early, and it arrives within the next 24 hours.
 
 We also recommend contacting your local {{carrier_name}} office, as they may be able to provide additional details about the delivery.
 If you're still unable to locate your package, please let us know, and we’ll figure out the next steps!
@@ -307,7 +309,8 @@ Para que la personalización funcione correctamente, es **esencial** que las pla
 *   `{{delivery_location}}`: Ubicación específica donde se entregó el paquete (ej. buzón, puerta principal).
 *   `{{delivery_date}}`: Fecha en que se entregó el paquete.
 *   `{{delivery_address}}`: Dirección completa de entrega del paquete.
-*   `{{delivery_delay_days}}`: Número de días de retraso en la entrega.
+*   `{{delivery_delay_days}}`: Número de días de retraso en la entrega (comparado con la fecha estimada).
+*   `{{days_since_delivery}}`: Número de días que han pasado desde la fecha de entrega real.
 *   `{{product_details}}`: Detalles de los productos incluidos en el envío (nombre, cantidad, etc.).
 *   `{{product_quantity}}`: Cantidad de un producto específico.
 *   `{{product_name}}`: Nombre de un producto específico.
