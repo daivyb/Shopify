@@ -10,17 +10,7 @@ const PROCESSED_LABEL = 'GeminiMessage'; // Etiqueta para marcar como procesado
  * @returns {GoogleAppsScript.Gmail.GmailThread[]} Una lista de hilos de Gmail.
  */
 function findThreadsToProcess() {
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-
-  const year = yesterday.getFullYear();
-  const month = yesterday.getMonth() + 1; // getMonth() es 0-indexado
-  const day = yesterday.getDate();
-  
-  // Formato para la búsqueda en Gmail: YYYY/MM/DD
-  const dateQuery = ` after:${year}/${month}/${day}`;
-  const query = `label:${TRIGGER_LABEL} -label:${PROCESSED_LABEL}${dateQuery}`;
+  const query = `label:${TRIGGER_LABEL} -label:${PROCESSED_LABEL}`;
   
   try {
     Logger.log(`Ejecutando búsqueda en Gmail con la consulta: "${query}"`);

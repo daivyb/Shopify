@@ -194,9 +194,9 @@ Thank you so much for your patience during this. Don’t hesitate to reach out!
 Hi {{customer_name}},
 
 Thank you for reaching out. I'm sorry to hear about the issue with your order {{order_id}}, but rest assured, we’ll work to resolve this.
-I’ve checked the tracking number ({{carrier_name}} {{tracking_number}}), and it shows that the package was delivered to {{delivery_location}} on {{delivery_date}} in {{delivery_address}}.
+I’ve checked the tracking number ({{carrier_name}} {{tracking_number}}), and it shows that the package was delivered on {{delivery_date}} in {{delivery_address}}.
 
-Could it be that a family member or neighbor received the package on your behalf? Sometimes, {{carrier_name}} marks a package as delivered a bit early, and it arrives within the next 24 hours.
+Could it be that a family member or neighbor received the package on your behalf? Sometimes, {{carrier_name}} marks a package as delivered a bit early, and it arrives within the next 24 hours/a couple of days. 
 
 We also recommend contacting your local {{carrier_name}} office, as they may be able to provide additional details about the delivery.
 If you're still unable to locate your package, please let us know, and we’ll figure out the next steps!
@@ -290,6 +290,19 @@ Since the package was delivered to the wrong address, we’ve gone ahead and pro
 We appreciate your patience, and we’ll do everything we can to ensure this one arrives without any further issues.
 
 
+### Complaint: Stock Issue
+
+#### Context: Partially Fulfilled Order
+
+Hello {{customer_name}},
+
+Thank you for reaching out about your order #{{order_id}}.
+
+I see that your order was partially shipped and you’re still waiting for the remaining item(s). I’m currently checking the inventory status to provide you with an update on when the rest of your item(s) will be shipped.
+
+Thank you for your patience.
+
+
 ## 7. Consideraciones Importantes sobre Plantillas
 
 Para que la personalización funcione correctamente, es **esencial** que las plantillas almacenadas en Notion contengan placeholders con el formato `{{nombre_del_campo}}`. Estos placeholders serán reemplazados automáticamente por los datos extraídos de Shopify o del correo electrónico.
@@ -303,14 +316,13 @@ Para que la personalización funcione correctamente, es **esencial** que las pla
 *   `{{order_date}}`: Fecha de creación del pedido.
 *   `{{tracking_number}}`: Número de seguimiento del último envío.
 *   `{{tracking_url}}`: URL de seguimiento del último envío.
-*   `{{delivery_status}}`: Estado actual de la entrega del pedido (ej. DELIVERED, IN_TRANSIT, PENDING).
+*   `{{delivery_status}}`: Estado actual de la entrega del pedido (ej. DELIVERED, IN_TRANSIT, TRACKING ADDED).
 *   `{{carrier_name}}`: Nombre de la empresa de transporte (ej. USPS, FedEx).
 *   `{{expected_delivery_date}}`: Fecha estimada de entrega del pedido.
 *   `{{delivery_location}}`: Ubicación específica donde se entregó el paquete (ej. buzón, puerta principal).
 *   `{{delivery_date}}`: Fecha en que se entregó el paquete.
 *   `{{delivery_address}}`: Dirección completa de entrega del paquete.
-*   `{{delivery_delay_days}}`: Número de días de retraso en la entrega (comparado con la fecha estimada).
-*   `{{days_since_delivery}}`: Número de días que han pasado desde la fecha de entrega real.
+*   `{{delivery_delay_days}}`: Número de días de retraso en la entrega.
 *   `{{product_details}}`: Detalles de los productos incluidos en el envío (nombre, cantidad, etc.).
 *   `{{product_quantity}}`: Cantidad de un producto específico.
 *   `{{product_name}}`: Nombre de un producto específico.

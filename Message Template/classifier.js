@@ -34,7 +34,7 @@ const TAGS = [
   },
   {
     tag: 'Complaint/Platform Issue',
-    description: 'Problemas relacionados con el uso de la tienda en Shopify y dificultades para cancelar suscripciones donde el especialista debera actuar a traves de Shopify para apoyar al cliente.'
+    description: 'Problemas relacionados con el uso de la tienda en Shopify (compra de productos fuera de stock, entre otros) y dificultades para cancelar suscripciones donde el especialista debera actuar a traves de Shopify para apoyar al cliente.'
   },
   {
     tag: 'Complaint/Supply Issue',
