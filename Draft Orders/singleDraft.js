@@ -5,7 +5,8 @@ function createDraftOrder(orderData) {
   const bundleMap = {
     "AllPurpose1Bottle": ["Chef-Grade Algae Cooking Oil (Gifting)"],
     "ACC-1xChili_1xMushroom-Bundle": ["Shiitake Mushroom Oil (Gifting)", "Gochugaru Chili Oil (Gifting)"],
-    "ACC-Bundle-Small": ["Chef-Grade Algae Cooking Oil (Gifting)", "Shiitake Mushroom Oil (Gifting)", "Gochugaru Chili Oil (Gifting)"]
+    "ACC-Bundle-Small": ["Chef-Grade Algae Cooking Oil (Gifting)", "Shiitake Mushroom Oil (Gifting)", "Gochugaru Chili Oil (Gifting)"],
+    "ACC-Squeeze-Trio": ["Shiitake Mushroom Oil (Gifting)", "Gochugaru Chili Oil (Gifting)", "Chef-Grade Algae Cooking Oil 7oz (Gifting)"]
   };
 
   // Crea considerando Bundles y No Bundles.

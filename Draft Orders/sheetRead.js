@@ -23,8 +23,8 @@ function getSheetData() {
     return obj;
   });
 
-  // Filtrar solo filas que tengan Status = "Need to Ship"
-     return data.filter(r => (r.Status || "").toLowerCase() === "need to ship");
+  // Filtrar solo filas que tengan Status = "To Create Order"
+     return data.filter(r => (r.Status || "").toLowerCase() === "to create order");
 
 }
 
