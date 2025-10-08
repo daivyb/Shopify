@@ -3,7 +3,7 @@ function getGeminiResponse(prompt) {
   const GEMINI_API_KEY = PropertiesService.getScriptProperties().getProperty("GEMINI_API_KEY");
 
   // const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${apiKey}`;
-  const endpoint = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=${GEMINI_API_KEY}`;
+  const endpoint = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
   const payload = {
     "contents": [
@@ -46,9 +46,9 @@ function getGeminiResponse(prompt) {
 }
 
 
-/* function testGeminiVowels() {
-  const prompt = "Escribe todas las vocales en español en orden: a, e, i, o, u.";
-  const result = getGeminiResponse(prompt);
-  Logger.log("Respuesta de Gemini (vocales): " + result);
-} */
+// function testGeminiVowels() {
+//   const prompt = "Escribe todas las vocales en español en orden: a, e, i, o, u.";
+//   const result = getGeminiResponse(prompt);
+//   Logger.log("Respuesta de Gemini (vocales): " + result);
+// }
 

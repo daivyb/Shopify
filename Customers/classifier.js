@@ -10,19 +10,19 @@ const TAGS = [
   },
   {
     tag: 'Inquiry/Product Info',
-    description: 'Preguntas sobre ingredientes, composición, beneficios y contras para la salud, propiedades del producto y su uso en diferentes contextos culinarios donde el especialista debera generar una respuesta informativa.'
+    description: 'Preguntas del cliente sobre ingredientes, composición, beneficios y contras para la salud, propiedades del producto y su uso en diferentes contextos culinarios donde el especialista debera generar una respuesta informativa.'
   },
   {
     tag: 'Inquiry/Modification Request',
-    description: 'Solicitudes de modificación y cancelación de ordenes o suscripciones de compra recurrente donde el especialista debera proceder a modificar la orden en Shopify.'
+    description: 'Solicitudes del cliente de modificación y cancelación de ordenes o suscripciones de compra recurrente donde el especialista debera proceder a modificar la orden en Shopify.'
   },
   {
     tag: 'Inquiry/International Inquiry',
-    description: 'Consultas sobre disponibilidad internacional y compras al por mayor o menor fuera de Estados Unidos. Solo se consideran retailers y clientes internacionales donde el especialista debera forwardear al equipo de ventas.'
+    description: 'Consultas del cliente sobre disponibilidad internacional y compras al por mayor o menor fuera de Estados Unidos. Solo se consideran retailers y clientes internacionales donde el especialista debera forwardear al equipo de ventas.'
   },
   {
     tag: 'Inquiry/Other Inquiry',
-    description: 'Preguntas generales sobre el servicio, opciones de envío y soporte para el cliente de Algae Cooking Club. Solo se considera a clientes que buscan alguna informacion adicional donde el especialista debera generar una respuesta analitica.'
+    description: 'Preguntas generales del cliente sobre el servicio, opciones de envío y soporte para el cliente de Algae Cooking Club. Solo se considera a clientes que buscan alguna informacion adicional donde el especialista debera generar una respuesta analitica.'
   },
   {
     tag: 'Inquiry/PR',
@@ -30,11 +30,11 @@ const TAGS = [
   },
   {
     tag: 'Inquiry/Status Update',
-    description: 'Solicitudes sobre el estado de la orden de un cliente que realizo la compra a traves de Shopify donde el especialista debera brindar informacion segun la informacion de seguimiento que revisara con el carrier. '
+    description: 'Solicitudes del cliente sobre el estado de la orden de un cliente que realizo la compra a traves de Shopify donde el especialista debera brindar informacion segun la informacion de seguimiento que revisara con el carrier.'
   },
   {
     tag: 'Complaint/Platform Issue',
-    description: 'Problemas relacionados con el uso de la tienda en Shopify (compra de productos fuera de stock, entre otros) y dificultades para cancelar suscripciones donde el especialista debera actuar a traves de Shopify para apoyar al cliente.'
+    description: 'Problemas del cliente relacionados con el uso de la tienda en Shopify (compra de productos fuera de stock, entre otros relacionados al proceso de compra en tienda virtual) y dificultades para cancelar suscripciones donde el especialista debera actuar a traves de Shopify para apoyar al cliente.'
   },
   {
     tag: 'Complaint/Supply Issue',
@@ -46,7 +46,7 @@ const TAGS = [
   },
   {
     tag: 'Complaint/Stock Issue',
-    description: 'Quejas por la demora en la entrega del producto por falta de stock donde el especialista debera revisar el inventario en Shopify o 3PL.'
+    description: 'Quejas por la demora en la entrega del producto o envios en dos o mas partes por falta de stock donde el especialista debera revisar el inventario en Shopify o 3PL.'
   },
   {
     tag: 'Complaint/Shipping Issue',
@@ -54,7 +54,7 @@ const TAGS = [
   },
   {
     tag: 'Complaint/Product Issue',
-    description: 'Quejas sobre la calidad del producto respecto a lo que se esperaba donde el especialista debera generar un mensaje explicando las caracteristicas y recomendaciones en el uso optimo del producto.'
+    description: 'Quejas del cliente sobre la calidad del producto respecto a lo que se esperaba donde el especialista debera generar un mensaje explicando las caracteristicas y recomendaciones en el uso optimo del producto.'
   },
    {
     tag: 'Faire',
@@ -65,11 +65,15 @@ const TAGS = [
     description: 'Correos automaticos solo de Shopify como invoices y seguimiento de una orden. El correo contiene en la conversacion a letscook@algaecookingclub.com quien inicio la conversacion, no se considera reply o forward por un cliente porque el cliente puede estar usando dicha informacion automatica para dar contexto a su solicitud. El especialista no genera ninguna accion solo revisa el detalle.'
   },
    {
+    tag: 'Chloe/Kas',
+    description: 'Correos de clientes que respondieron a encuestas automaticas de parte de la empresa Algae Cooking Club (Chloe o Kas) donde se busco obtener un feedback de sus clientes subscritos al Email Marketing de Shopify donde el especialista no revisará el detalle solo debe asegurar el etiquetado para que sea leído por el área de Marketing.'
+  },  
+   {
     tag: 'Airgoods',
     description: 'Correos automaticos solo de Airgoods sobre nuevas ordenes de wholesale, notificaciones sobre el envio, depositos y problemas en la orden donde el especialista no genera ninguna accion solo revisa el detalle.'
   },
   {
     tag: 'Unclassified',
-    description: 'Correos de agradecimiento de clientes o servicios por parte de empresas/marcas que buscan lograr una llamada, mensaje o reunion para ofrecer su servicio de pago. Asi como otros correos de spam (automaticos), por ejemplo, el emisor Recharge HQ y otros. Son irrelevantes porque no generan una accion en el especialista de atencion al cliente ni tampoco debe revisar el detalle.'
+    description: 'Correos de agradecimiento de clientes o servicios por parte de empresas/marcas que buscan lograr una llamada, mensaje o reunion para ofrecer su servicio de pago. Asi como otros correos de spam (automaticos), por ejemplo, el emisor no-reply@t1.rechargemail.com, barry@nationalalgaeassociation.robly.com, Tiktok y otros. Todos estos contextos son irrelevantes porque no generan una accion en el especialista de atencion al cliente ni tampoco debe revisar el detalle.'
   },
 ];
