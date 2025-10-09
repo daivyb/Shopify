@@ -20,8 +20,7 @@ function personalizeTemplate(template, emailBody, customer, latestOrder) {
     'customer_email': customer ? customer.email : null,
     'order_id': latestOrder ? latestOrder.order_number : extractOrderId(emailBody),
     'order_date': latestOrder && latestOrder.created_at ? new Date(latestOrder.created_at).toLocaleDateString() : null,
-    'tracking_number': latestOrder && latestOrder.fulfillments && latestOrder.fulfillments.length > 0 && latestOrder.fulfillments[0].tracking_number ? latestOrder.fulfillments[0].tracking_number : null,
-    'tracking_url': latestOrder && latestOrder.fulfillments && latestOrder.fulfillments.length > 0 && latestOrder.fulfillments[0].tracking_url ? latestOrder.fulfillments[0].tracking_url : null,
+    'tracking_number': getTrackingInfo(latestOrder),
     'order_items': latestOrder ? formatOrderItems(latestOrder.line_items) : null,
     // New placeholders for Shipping Issue
     'delivery_status': latestOrder && latestOrder.fulfillments && latestOrder.fulfillments.length > 0 && latestOrder.fulfillments[0].shipment_status ? latestOrder.fulfillments[0].shipment_status : null,
@@ -49,6 +48,25 @@ function personalizeTemplate(template, emailBody, customer, latestOrder) {
   }
 
   return personalizedText;
+}
+
+/**
+ * Formatea la información de seguimiento en una cadena de texto.
+ * @param {Object} order El objeto del pedido de Shopify.
+ * @returns {string|null} El número de seguimiento formateado con URL o null.
+ */
+function getTrackingInfo(order) {
+  if (order && order.fulfillments && order.fulfillments.length > 0) {
+    const fulfillment = order.fulfillments[0];
+    const number = fulfillment.tracking_number;
+    const url = fulfillment.tracking_url;
+
+    if (number && url) {
+      return `${number} (${url})`;
+    }
+    return number; // Devuelve solo el número si la URL no está disponible
+  }
+  return null; // Devuelve nulo si no hay fulfillments
 }
 
 /**
