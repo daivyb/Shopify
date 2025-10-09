@@ -26,8 +26,8 @@ function personalizeTemplate(template, emailBody, customer, latestOrder) {
     // New placeholders for Shipping Issue
     'delivery_status': latestOrder && latestOrder.fulfillments && latestOrder.fulfillments.length > 0 && latestOrder.fulfillments[0].shipment_status ? latestOrder.fulfillments[0].shipment_status : null,
     'carrier_name': latestOrder && latestOrder.fulfillments && latestOrder.fulfillments.length > 0 && latestOrder.fulfillments[0].tracking_company ? latestOrder.fulfillments[0].tracking_company : null,
-    'expected_delivery_date': latestOrder && latestOrder.fulfillments && latestOrder.fulfillments.length > 0 && latestOrder.fulfillments[0].estimated_delivery_at ? new Date(latestOrder.fulfillments[0].estimated_delivery_at).toLocaleDateString() : null,
-    'delivery_location': latestOrder && latestOrder.shipping_address && latestOrder.shipping_address.address1 ? latestOrder.shipping_address.address1 : null, // Assuming address1 is sufficient for location
+    'expected_delivery_date': getCarrierDeliveryDate(latestOrder),
+    'delivery_location': latestOrder && latestOrder.shipping_address && latestOrder.shipping_address.address1 ? latestOrder.shipping_address.address1 : null,
     'delivery_date': latestOrder && latestOrder.fulfillments && latestOrder.fulfillments.length > 0 && latestOrder.fulfillments[0].delivered_at ? new Date(latestOrder.fulfillments[0].delivered_at).toLocaleDateString() : null,
     'delivery_address': latestOrder && latestOrder.shipping_address ? formatAddress(latestOrder.shipping_address) : null,
     'delivery_delay_days': calculateDeliveryDelay(latestOrder),
@@ -44,12 +44,36 @@ function personalizeTemplate(template, emailBody, customer, latestOrder) {
     
     // Condición clave: solo reemplazar si el valor no es nulo o vacío.
     if (value) {
-      // Usamos una expresión regular global para reemplazar todas las ocurrencias.
       personalizedText = personalizedText.replace(new RegExp(placeholder, 'g'), value);
     }
   }
 
   return personalizedText;
+}
+
+/**
+ * Obtiene la fecha de entrega del transportista desde los datos del pedido.
+ * Prioriza la fecha máxima de entrega del 'fulfillment order'.
+ * @param {Object} order El objeto del pedido de Shopify.
+ * @returns {string|null} La fecha de entrega formateada o null si no se encuentra.
+ */
+function getCarrierDeliveryDate(order) {
+  // Prioridad 1: Usar la fecha máxima de entrega del transportista si existe.
+  if (order && order.fulfillment_orders && order.fulfillment_orders.length > 0) {
+    const fo = order.fulfillment_orders[0]; // Usar el primer fulfillment order
+    if (fo.delivery_method && fo.delivery_method.maxDeliveryDateTime) {
+      const maxDateStr = fo.delivery_method.maxDeliveryDateTime;
+      return new Date(maxDateStr).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    }
+  }
+
+  // Prioridad 2: Fallback al 'estimated_delivery_at' del fulfillment.
+  if (order && order.fulfillments && order.fulfillments.length > 0 && order.fulfillments[0].estimated_delivery_at) {
+    return new Date(order.fulfillments[0].estimated_delivery_at).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  }
+
+  // Fallback final si no se encuentra ninguna fecha.
+  return null;
 }
 
 /**

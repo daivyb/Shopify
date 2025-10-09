@@ -86,6 +86,12 @@ function getCustomerLatestOrderDetails(customerId) {
           fulfillment.delivered_at = deliveryDate;
         }
       }
+
+      // Adjuntar los detalles de los "fulfillment orders" para obtener fechas de entrega más precisas
+      const fulfillmentOrders = getFulfillmentOrderDetails(latestOrder.id);
+      if (fulfillmentOrders) {
+        latestOrder.fulfillment_orders = fulfillmentOrders;
+      }
       
       return latestOrder;
     } else {
@@ -94,6 +100,45 @@ function getCustomerLatestOrderDetails(customerId) {
     }
   } catch (e) {
     Logger.log(`Error al conectar con la API de Shopify para obtener pedidos: ${e.toString()}`);
+    return null;
+  }
+}
+
+/**
+ * Obtiene los detalles de los "fulfillment orders" de un pedido específico.
+ * Estos objetos contienen información más detallada sobre la entrega, como el min/max delivery datetime.
+ * @param {string} orderId El ID del pedido de Shopify.
+ * @returns {Array|null} Un array de objetos de fulfillment order o null.
+ */
+function getFulfillmentOrderDetails(orderId) {
+  if (!SHOPIFY_API_ACCESS_TOKEN || !SHOPIFY_SHOP_URL) {
+    Logger.log('Error: Credenciales de la API de Shopify no configuradas.');
+    return null;
+  }
+
+  const apiUrl = `https://${SHOPIFY_SHOP_URL}/admin/api/2023-10/orders/${orderId}/fulfillment_orders.json`;
+
+  const options = {
+    'method': 'get',
+    'contentType': 'application/json',
+    'headers': {
+      'X-Shopify-Access-Token': SHOPIFY_API_ACCESS_TOKEN,
+    }
+  };
+
+  try {
+    const response = UrlFetchApp.fetch(apiUrl, options);
+    const jsonResponse = JSON.parse(response.getContentText());
+    
+    if (jsonResponse.fulfillment_orders && jsonResponse.fulfillment_orders.length > 0) {
+      Logger.log(`Se encontraron ${jsonResponse.fulfillment_orders.length} fulfillment orders para el pedido ${orderId}.`);
+      return jsonResponse.fulfillment_orders;
+    } else {
+      Logger.log(`No se encontraron fulfillment orders para el ID de pedido: ${orderId}`);
+      return null;
+    }
+  } catch (e) {
+    Logger.log(`Error al obtener fulfillment orders de Shopify: ${e.toString()}`);
     return null;
   }
 }

@@ -46,7 +46,7 @@ const TAGS = [
   },
   {
     tag: 'Complaint/Stock Issue',
-    description: 'Quejas por la demora en la entrega del producto por falta de stock donde el especialista debera revisar el inventario en Shopify o 3PL.'
+    description: 'Quejas por la demora en la entrega del producto o envios en dos o mas partes por falta de stock donde el especialista debera revisar el inventario en Shopify o 3PL.'
   },
   {
     tag: 'Complaint/Shipping Issue',

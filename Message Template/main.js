@@ -19,9 +19,21 @@ function createDraftReplies() {
 
   threads.forEach(thread => {
     const threadId = thread.getId();
-    const messageDetails = getFirstMessageDetails(thread); // Get details early for logging
 
-    // --- Start of structured log entry ---
+    // Primero, verificar la clasificación y si existen plantillas, sin registrar nada aún.
+    const classificationLabel = getClassificationLabel(thread, getTagReferences());
+    if (!classificationLabel) {
+      return; // Omitir silenciosamente si no hay etiqueta de clasificación
+    }
+
+    const allTemplates = getAllTemplatesForLabel(classificationLabel);
+    if (!allTemplates) {
+      return; // Omitir silenciosamente si la etiqueta no corresponde a una BD en Notion
+    }
+
+    // --- AHORA, SI PASA LOS FILTROS, INICIAMOS EL LOG ---
+    const messageDetails = getFirstMessageDetails(thread); 
+
     Logger.log('--------------------------------------------------');
     Logger.log(`[INICIO] Procesando Hilo ID: ${threadId}`);
     
@@ -35,22 +47,7 @@ function createDraftReplies() {
       return;
     }
 
-    const classificationLabel = getClassificationLabel(thread, tagReferences);
-    if (!classificationLabel) {
-      Logger.log(`  > Advertencia: El hilo no tiene una etiqueta de clasificación válida. Omitiendo.`);
-      Logger.log(`[FIN] Hilo ID: ${threadId} (Omitido)`);
-      Logger.log('--------------------------------------------------');
-      return;
-    }
     Logger.log(`  > Clasificación: ${classificationLabel}`);
-
-    const allTemplates = getAllTemplatesForLabel(classificationLabel);
-    if (!allTemplates) {
-      Logger.log(`  > Error: No se encontraron plantillas en Notion para la clasificación.`);
-      Logger.log(`[FIN] Hilo ID: ${threadId} (Error)`);
-      Logger.log('--------------------------------------------------');
-      return;
-    }
 
     // Customer and Order Info
     const customer = getCustomerDetails(messageDetails.from);
