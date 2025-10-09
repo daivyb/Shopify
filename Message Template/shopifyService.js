@@ -75,26 +75,38 @@ function getCustomerLatestOrderDetails(customerId) {
     const jsonResponse = JSON.parse(response.getContentText());
     
     if (jsonResponse.orders && jsonResponse.orders.length > 0) {
-      const latestOrder = jsonResponse.orders[0];
-      Logger.log(`Último pedido encontrado para el cliente ${customerId}: ${latestOrder.order_number}`);
+            const latestOrder = jsonResponse.orders[0];
+            Logger.log(`Último pedido encontrado para el cliente ${customerId}: ${latestOrder.order_number}`);
+            
+            if (latestOrder.fulfillments && latestOrder.fulfillments.length > 0) {
+              const fulfillment = latestOrder.fulfillments[0];
       
-      if (latestOrder.fulfillments && latestOrder.fulfillments.length > 0) {
-        const fulfillment = latestOrder.fulfillments[0];
-        const deliveryDate = getDeliveryDateFromFulfillmentEvents(latestOrder.id, fulfillment.id);
-        if (deliveryDate) {
-          // Inyectamos la fecha de entrega en el objeto para que personalizer.js la pueda usar.
-          fulfillment.delivered_at = deliveryDate;
-        }
-      }
-
-      // Adjuntar los detalles de los "fulfillment orders" para obtener fechas de entrega más precisas
-      const fulfillmentOrders = getFulfillmentOrderDetails(latestOrder.id);
-      if (fulfillmentOrders) {
-        latestOrder.fulfillment_orders = fulfillmentOrders;
-      }
+              // Buscar la fecha de entrega estimada en los eventos del fulfillment
+              const events = getFulfillmentEvents(latestOrder.id, fulfillment.id);
+              if (events) {
+                const eventWithEstimate = events.find(event => event.estimated_delivery_at);
+                if (eventWithEstimate) {
+                  // Inyectar la fecha estimada en el objeto fulfillment para que personalizer.js la use
+                  fulfillment.estimated_delivery_at = eventWithEstimate.estimated_delivery_at;
+                  Logger.log(`Fecha de entrega estimada encontrada en eventos: ${fulfillment.estimated_delivery_at}`);
+                }
+              }
       
-      return latestOrder;
-    } else {
+              // Buscar la fecha de entrega final (cuando ya se entregó)
+              const deliveryDate = getDeliveryDateFromFulfillmentEvents(latestOrder.id, fulfillment.id);
+              if (deliveryDate) {
+                // Inyectamos la fecha de entrega en el objeto para que personalizer.js la pueda usar.
+                fulfillment.delivered_at = deliveryDate;
+              }
+            }
+            
+            // Adjuntar los detalles de los "fulfillment orders" para obtener fechas de entrega más precisas
+            const fulfillmentOrders = getFulfillmentOrderDetails(latestOrder.id);
+            if (fulfillmentOrders) {
+              latestOrder.fulfillment_orders = fulfillmentOrders;
+            }
+            
+            return latestOrder;    } else {
       Logger.log(`No se encontraron pedidos para el cliente con ID: ${customerId}`);
       return null;
     }
@@ -139,6 +151,41 @@ function getFulfillmentOrderDetails(orderId) {
     }
   } catch (e) {
     Logger.log(`Error al obtener fulfillment orders de Shopify: ${e.toString()}`);
+    return null;
+  }
+}
+
+/**
+ * Obtiene todos los eventos de un fulfillment específico.
+ * @param {string} orderId El ID del pedido.
+ * @param {string} fulfillmentId El ID del fulfillment.
+ * @returns {Array|null} Un array de objetos de evento o null.
+ */
+function getFulfillmentEvents(orderId, fulfillmentId) {
+  if (!SHOPIFY_API_ACCESS_TOKEN || !SHOPIFY_SHOP_URL) {
+    Logger.log('Error: Credenciales de API no configuradas.');
+    return null;
+  }
+
+  const apiUrl = `https://${SHOPIFY_SHOP_URL}/admin/api/2023-10/orders/${orderId}/fulfillments/${fulfillmentId}/events.json`;
+  const options = {
+    'method': 'get',
+    'contentType': 'application/json',
+    'headers': {
+      'X-Shopify-Access-Token': SHOPIFY_API_ACCESS_TOKEN,
+    }
+  };
+
+  try {
+    const response = UrlFetchApp.fetch(apiUrl, options);
+    const jsonResponse = JSON.parse(response.getContentText());
+    
+    if (jsonResponse.fulfillment_events && jsonResponse.fulfillment_events.length > 0) {
+      return jsonResponse.fulfillment_events;
+    }
+    return null;
+  } catch (e) {
+    Logger.log(`Error al obtener los eventos de fulfillment: ${e.toString()}`);
     return null;
   }
 }
