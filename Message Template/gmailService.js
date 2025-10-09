@@ -44,23 +44,34 @@ function getClassificationLabel(thread, tagReferences) {
 }
 
 /**
- * Extrae los detalles (remitente, cuerpo) del PRIMER mensaje de un hilo.
+ * Extrae los detalles (remitente, cuerpo, si tiene imágenes) del PRIMER mensaje de un hilo.
  * @param {GoogleAppsScript.Gmail.GmailThread} thread El hilo de Gmail.
- * @returns {{from: string, body: string}|null} Un objeto con el remitente y el cuerpo del mensaje.
+ * @returns {{from: string, body: string, subject: string, hasImages: boolean}|null} Un objeto con los detalles del mensaje.
  */
 function getFirstMessageDetails(thread) {
   const message = thread.getMessages()[0];
   if (!message) return null;
 
-  const from = message.getFrom(); // Extrae el remitente, ej: "John Doe <john.doe@example.com>"
+  const from = message.getFrom();
+  const subject = message.getSubject();
   const emailRegex = /<(.+)>/;
   const match = from.match(emailRegex);
-  const senderEmail = match ? match[1] : from; // Extrae solo la dirección de email
+  const senderEmail = match ? match[1] : from;
 
   const fullBody = message.getPlainBody();
   const body = fullBody.substring(0, 1024); // Limita para optimizar
 
-  return { from: senderEmail, body: body };
+  // Detectar si hay imágenes adjuntas
+  const attachments = message.getAttachments();
+  let hasImages = false;
+  for (let i = 0; i < attachments.length; i++) {
+    if (attachments[i].getContentType().startsWith('image/')) {
+      hasImages = true;
+      break;
+    }
+  }
+
+  return { from: senderEmail, body: body, subject: subject, hasImages: hasImages };
 }
 
 /**

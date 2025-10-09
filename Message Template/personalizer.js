@@ -29,7 +29,7 @@ function personalizeTemplate(template, emailBody, customer, latestOrder) {
     'expected_delivery_date': getCarrierDeliveryDate(latestOrder),
     'delivery_location': latestOrder && latestOrder.shipping_address && latestOrder.shipping_address.address1 ? latestOrder.shipping_address.address1 : null,
     'delivery_date': latestOrder && latestOrder.fulfillments && latestOrder.fulfillments.length > 0 && latestOrder.fulfillments[0].delivered_at ? new Date(latestOrder.fulfillments[0].delivered_at).toLocaleDateString() : null,
-    'delivery_address': latestOrder && latestOrder.shipping_address ? formatAddress(latestOrder.shipping_address) : null,
+    'shipping_address': latestOrder && latestOrder.shipping_address ? formatAddress(latestOrder.shipping_address) : null,
     'delivery_delay_days': calculateDeliveryDelay(latestOrder),
     'days_since_delivery': calculateDaysSinceDelivery(latestOrder), // New placeholder
     'product_details': latestOrder ? formatProductDetails(latestOrder.line_items) : null, // Requires a new helper function

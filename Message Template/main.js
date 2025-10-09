@@ -84,7 +84,7 @@ function createDraftReplies() {
     }
     
     // Build prompt and get Gemini response
-    const prompt = buildPromptForBestResponse(messageDetails.body, allTemplates, customer, latestOrder);
+    const prompt = buildPromptForBestResponse(messageDetails, allTemplates, customer, latestOrder);
     const geminiChoice = getGeminiResponse(prompt);
 
     if (!geminiChoice) {
@@ -124,7 +124,7 @@ function createDraftReplies() {
  * @param {Object|null} latestOrder Detalles del último pedido del cliente de Shopify.
  * @returns {string} El prompt completo.
  */
-function buildPromptForBestResponse(emailBody, allTemplates, customer, latestOrder) {
+function buildPromptForBestResponse(messageDetails, allTemplates, customer, latestOrder) {
   let optionsText = '\n';
   Object.keys(allTemplates).forEach(context => {
     Object.keys(allTemplates[context]).forEach(responseKey => {
@@ -180,7 +180,12 @@ function buildPromptForBestResponse(emailBody, allTemplates, customer, latestOrd
     }
   }
 
-  return `Analiza el siguiente correo electrónico de un cliente y elige la plantilla de respuesta más adecuada de la lista proporcionada. Responde únicamente con el ID de la plantilla seleccionada (por ejemplo, "Pedido perdido::Respuesta_A").\n\n---\nCORREO DEL CLIENTE ---\n${emailBody}\n${customerInfo}\n${orderInfo}\n\n---\nPLANTILLAS DISPONIBLES ---\n${optionsText}`;
+  let imageInfo = '';
+  if (messageDetails.hasImages) {
+    imageInfo = '\n--- NOTA ADICIONAL ---\nEl cliente YA HA ADJUNTADO imágenes en este correo.\n';
+  }
+
+  return `Analiza el siguiente correo electrónico de un cliente y elige la plantilla de respuesta más adecuada de la lista proporcionada. Responde únicamente con el ID de la plantilla seleccionada (por ejemplo, "Pedido perdido::Respuesta_A").\n\n---\nCORREO DEL CLIENTE ---\n${messageDetails.body}${imageInfo}${customerInfo}${orderInfo}\n\n---\nPLANTILLAS DISPONIBLES ---\n${optionsText}`;
 }
 
 /**
