@@ -3,7 +3,9 @@
 El script sigue un proceso automatizado y optimizado:
 
 1.  **Búsqueda Selectiva**: Encuentra correos con la etiqueta `GeminiLabeled` que hayan sido recibidos **a partir del día actual**, ignorando correos antiguos. Además, excluye los que ya tienen la etiqueta `GeminiMessage` para no procesarlos dos veces.
-2.  **Clasificación**: Lee la etiqueta de categoría del correo (ej. `Complaint/Shipping Issue`).
+2.  **Clasificación**: Utiliza el archivo `classifier.js` para identificar la categoría del correo, el cual contiene una lista de etiquetas predefinidas (ej. `Complaint/Shipping Issue`).
+    *   **Si se encuentra una etiqueta coincidente**: El script usa esa categoría para continuar el flujo.
+    *   **Si no se encuentra ninguna etiqueta coincidente**: El script ignora el correo y no realiza ninguna acción.
 3.  **Extracción de Contenido**: **Toma** el hilo de correo y lee únicamente el **primer mensaje**, truncándolo a **1024 caracteres**.
 4.  **Consulta a Notion**: **Toma** la categoría identificada del correo y consulta la base de datos de Notion para obtener **todas** las plantillas de respuesta disponibles para esa categoría.
 5.  **Enriquecimiento de Datos**: Busca al cliente en Shopify usando su email. Si se encuentra, obtiene los detalles de su **último pedido**, incluyendo el estado de preparación (`fulfillment_status`) y, más importante, los datos de envío del paquete (`fulfillment`).
@@ -21,310 +23,27 @@ El script sigue un proceso automatizado y optimizado:
 8.  **Creación de Borrador**: Genera un borrador de respuesta en el hilo de correo original con el mensaje ya personalizado.
 9.  **Etiquetado Final**: Aplica la etiqueta `GeminiMessage` para marcar el hilo como procesado.
 
-## 6. Plantillas de Respuesta con Placeholders (Ejemplos)
-
-Aquí se muestran las plantillas de respuesta con los placeholders que serán reemplazados automáticamente por la información de Shopify o del correo electrónico.
-
-### Complaint: Supply Issue
-
-#### Context: Leaking/Lid open
-
-**Respuesta 1:**
-Hi {{customer_name}},
-
-Thank you for reaching out to us.
-
-We truly understand your concern regarding the condition of your product from order #{{order_id}}. To better assist you, could you please provide a photo of the bottle that leaked? This will help us evaluate the situation and take the necessary steps to resolve it.
-
-Looking forward to your response.
-
-Thank you!
-
-**Respuesta 2:**
-Hi {{customer_name}},
-
-Thanks so much for sending the photos!
-
-I’m so sorry to hear about the issue with your order #{{order_id}}. We definitely want to make things right for you. I’ve already processed a replacement for the damaged bottle, and it’ll be on its way shortly. You can track its progress here: {{tracking_url}} (Tracking number: {{tracking_number}}). As we are unable to accept returns on food products, feel free to keep or dispose of the damaged product. You can still use the oil as long as the safety seal is intact, but please consider the condition of the bottle when deciding whether to use it.
-
-
-Apologies again for the inconvenience and thank you for your understanding as we resolve this!
-
-Please let me know if this resolves the issue, or if there's anything else I can help with.
-
-
-**Respuesta 3:**
-Hi {{customer_name}},
-
-Thanks so much for sending the photos!
-
-I'm truly sorry for the frustration and inconvenience you've experienced with your order #{{order_id}}. This is absolutely not the experience we aim to provide.
-
-Due to FDA regulations, we’re unable to accept returns of consumable products. However, I’ve gone ahead and issued a full refund for both bottles—no return needed. Feel free to keep them or share them with someone else.
-
-In most cases, customers receive their refunds within 10 business days, though processing times may vary depending on your bank.
-
-
-Please let me know if this resolves the issue, or if there's anything else I can help with.
-
-#### Context: Missing Item/Wrong Item
-
-***Respuesta 1**
-Hi {{customer_name}},
-
-I’m truly sorry for the mix-up with your order #{{order_id}}. It looks like there was an error with the carrier.
-
-No worries, we’ll make this right. Before we process a replacement, could you please let us know which item(s) were missing? Once we know, your replacement will be on its way shortly. There’s no need to return the additional product, as we are not accepting returns at this time.
-
-Thank you again for your patience.
-
-***Respuesta 2**
-Hi {{customer_name}},
-
-I’m truly sorry for the mix-up with your order #{{order_id}}. It looks like there was a mispick at our warehouse / It looks like there was an error with the carrier.
-
-It looks like you were supposed to receive the following item(s):
-{{order_items}}
-
-No worries we’ll make this right. I’ve gone ahead and processed a replacement order for the missing item(s), and it should be on its way to you shortly. You can track its progress here: {{tracking_url}} (Tracking number: {{tracking_number}}). There’s no need to return the additional product, as we are not accepting returns at this time.
-
-Thank you again for your patience.
-
-**Respuesta 3:**
-Hi {{customer_name}},
-
-Thank you for your response,
-
-As a result, I’ve gone ahead and issued a refund for your order #{{order_id}}.
-
-In most cases, customers receive their refunds within 10 business days, though processing times may vary depending on your bank.
-
-We appreciate your understanding, and once again, I apologize for the inconvenience.
-
-
-#### Context: Damaged Item:Dented
-
-
-**Respuesta 1:**
-Hi {{customer_name}},
-
-I’m so sorry to hear about the issue with your order #{{order_id}}. We sincerely apologize for the inconvenience this has caused. To assist you as quickly as possible, could you please send us a photo of the product in question?
-This will allow us to properly validate the issue and take the next steps.
-
-Thank you for your understanding, and we’re committed to resolving this for you promptly. If you have any other questions, feel free to reach out.
-
-**Respuesta 2:**
-Hi {{customer_name}},
-
-Thanks for sending over the picture!
-
-[[We apologize for the inconvenience regarding your order #{{order_id}}.]]
-
-I’ve gone ahead and processed a replacement, and it should be on its way to you soon. You can track its progress here: {{tracking_url}} (Tracking number: {{tracking_number}}). You can still use the oil as long as the safety seal is intact, but please consider the condition of the bottle when deciding whether to use it.
-
-Please let me know if this resolves the issue, or if there's anything else I can help with.
-
-**Respuesta 3:**
-Hi {{customer_name}},
-
-Thanks so much for sending the photos!
-
-I'm truly sorry for the frustration and inconvenience you've experienced with your order #{{order_id}}. This is absolutely not the experience we aim to provide.
-
-Due to FDA regulations, we’re unable to accept returns of consumable products. However, I’ve gone ahead and issued a refund for both bottles—no return needed. Feel free to keep them or share them with someone else.
-
-In most cases, customers receive their refunds within 10 business days, though processing times may vary depending on your bank.
-
-
-Please let me know if this resolves the issue, or if there's anything else I can help with.
-
-
-#### Context: Damaged Item:Security Seal 
-
-**Respuesta 1:**
-Hi {{customer_name}},
-
-I’m so sorry to hear about the issue with your order #{{order_id}}. We sincerely apologize for the inconvenience this has caused. To assist you as quickly as possible, could you please send us a photo of the product in question?
-This will allow us to properly validate the issue and take the next steps.
-
-Thank you for your understanding, and we’re committed to resolving this for you promptly. If you have any other questions, feel free to reach out.
-
-
-**Respuesta 2:**
-Hi {{customer_name}},
-
-[[Thanks for sending over the picture!]]
-
-[[We apologize for the inconvenience regarding your order #{{order_id}}.]]
-
-I’ve gone ahead and processed a replacement, and it should be on its way to you soon. You can track its progress here: {{tracking_url}} (Tracking number: {{tracking_number}}). The oil is safe to use as long as the safety seal is fully intact. This situation can sometimes occur due to the sealing process or internal pressure during shipping, but rest assured the product has not been tampered with.
-
-Please let me know if this resolves the issue, or if there's anything else I can help with.
-
-
-### Complaint: Shipping Issue
-
-#### Context: Delayed Shipping Date (Expected to be delivered)
-
-**Respuesta 1:**
-Hi {{customer_name}},
-
-I'm so sorry your delivery is having issues with {{carrier_name}}, sometimes this happens and eventually they do find a way to your address. We will be sure to help you get your package, unfortunately we don't have direct control over shipping.
-
-I’ve checked the tracking number ({{carrier_name}} {{tracking_number}}), and it shows that the package is expected to be delivered on {{expected_delivery_date}} to:
-
-{{shipping_address}}
-
-If your package still does not arrive, we can send you a replacement order free of charge, or a refund on your purchase. However, we kindly ask for your patience as {{carrier_name}} works to resolve the issue.
-
-Thanks for your understanding, and we hope we can get you your products soon!
-
-**Respuesta 2:**
-Hi {{customer_name}},
-
-I’m so sorry for the delay with your order {{order_id}}. It appears that the package has been stuck in the system longer than expected.
-
-To make sure you don’t have to wait any longer, I’ll be processing a replacement order for you right away.
-
-Thank you so much for your patience during this. Don’t hesitate to reach out!
-
-#### Contexto2: Delivery Discrepancy (Status: Few days delivered)
-
-**Respuesta 1:**
-Hi {{customer_name}},
-
-Thank you for reaching out. I'm sorry to hear about the issue with your order {{order_id}}, but rest assured, we’ll work to resolve this.
-I’ve checked the tracking number ({{carrier_name}} {{tracking_number}}), and it shows that the package was delivered on {{delivery_date}} in {{delivery_address}}.
-
-Could it be that a family member or neighbor received the package on your behalf? Sometimes, {{carrier_name}} marks a package as delivered a bit early, and it arrives within the next 24 hours/a couple of days. 
-
-We also recommend contacting your local {{carrier_name}} office, as they may be able to provide additional details about the delivery.
-If you're still unable to locate your package, please let us know, and we’ll figure out the next steps!
-
-**Respuesta 2:**
-Hi {{customer_name}},
-
-I’m so sorry to hear that. We understand how frustrating this can be.
-
-We’d be happy to send a replacement to the same shipping address as your last order:
-{{shipping_address}}
-
-Please let us know if this address is correct or if there’s any other way we can assist you.
-
-Thank you for your understanding,
-
-#### Contexto: Never Delivered (Focus in Carrier)-Return to warehouse
-
-**Respuesta 1:**
-Hi {{customer_name}},
-
-I'm so sorry your order {{order_id}} didn’t arrive as expected. There may have been an issue with the carrier {{carrier_name}} due to a possible error in the shipping address or limited access to the delivery location. To ensure a successful delivery, could you please confirm your shipping address? 
-
-The shipment included {{product_details}}, and it was sent to the following address:
-
-{{shipping_address}}
-
-No worries, we’ll make this right. Before I place the replacement order, we’ll wait to receive your updated address to proceed accordingly.
-
-Thank you again for your patience and understanding.
-
-**Respuesta 2:**
-Hi {{customer_name}}!
-
-I’ve gone ahead and processed a replacement order for the missing items ({{product_quantity}} {{product_name}}), and it should be on its way to you shortly. If you’d like, feel free to check back with me in a couple of days, and I’ll be happy to provide you with the tracking number {{tracking_number}}.
-
-Thank you again for your patience and understanding.
-
-P.S.: We are using the following shipping address: {{shipping_address}}
-
-#### Contexto: Package not delivered (Status: A lot of days delivered in Shopify)
-
-**Respuesta 1:**
-Hi {{customer_name}},
-
-I'm so sorry your order {{order_id}} didn’t arrive as expected. There may have been an issue with the carrier {{carrier_name}} due to a possible error in the shipping address. To ensure a successful delivery, could you please provide your shipping address so we can verify it on our end?
-
-The shipment included {{product_details}}.
-
-No worries, we’ll make this right. Before I place the replacement order, we’ll wait to receive your updated address to proceed accordingly.
-
-While we recommend contacting your local {{carrier_name}} office, as they may be able to provide additional details about the delivery.
-
-Thank you again for your patience and understanding.
-
-**Respuesta 2:**
-Hi {{customer_name}},
-
-I'm truly sorry your order {{order_id}} didn’t arrive as expected.
-
-I’ve gone ahead and processed a replacement order for the missing items ({{product_quantity}} {{product_name}}), and it should be on its way to you shortly. If you’d like, feel free to check back with me in a couple of days, and I’ll be happy to provide you with the tracking number {{tracking_number}}.
-
-Thank you again for your patience and understanding.
-
-P.S.: We are using the following shipping address: {{shipping_address}}
-
-#### Contexto: Delivered to Another Address
-
-**Respuesta 1:**
-Hi {{customer_name}}!
-
-I'm truly sorry your order {{order_id}} didn’t arrive as expected. There may have been an issue with the carrier {{carrier_name}} due to a possible error in the shipping address. To ensure a successful delivery, could you please provide your shipping address so we can verify it on our end?
-
-The shipment included {{product_details}}, and it was sent to the following address: {{shipping_address}}
-
-No worries, we’ll make this right. Before I place the replacement order, we’ll wait to receive your updated address to proceed accordingly.
-
-While we recommend contacting your local {{carrier_name}} office, as they may be able to provide additional details about the delivery.
-
-Thank you again for your patience and understanding.
-
-**Respuesta 2:**
-Hi {{customer_name}},
-
-Thank you for reaching out. I'm sorry to hear about the issue with your order {{order_id}}, but rest assured, we’ll work to resolve this.
-
-Since the package was delivered to the wrong address, we’ve gone ahead and processed a replacement order for you. It will be sent to the correct address:
-
-{{shipping_address}}
-
-We appreciate your patience, and we’ll do everything we can to ensure this one arrives without any further issues.
-
-
-### Complaint: Stock Issue
-
-#### Context: Partially Fulfilled Order
-
-Hello {{customer_name}},
-
-Thank you for reaching out about your order #{{order_id}}.
-
-I see that your order was partially shipped and you’re still waiting for the remaining item(s). I’m currently checking the inventory status to provide you with an update on when the rest of your item(s) will be shipped.
-
-Thank you for your patience.
-
-
-## 7. Consideraciones Importantes sobre Plantillas
-
-Para que la personalización funcione correctamente, es **esencial** que las plantillas almacenadas en Notion contengan placeholders con el formato `{{nombre_del_campo}}`. Estos placeholders serán reemplazados automáticamente por los datos extraídos de Shopify o del correo electrónico.
-
-**Ejemplos de Placeholders que puedes usar:**
-
-*   `{{customer_name}}`: Primer nombre del cliente.
-*   `{{customer_full_name}}`: Nombre completo del cliente.
-*   `{{customer_email}}`: Correo electrónico del cliente.
-*   `{{order_id}}`: Número de pedido de Shopify.
-*   `{{order_date}}`: Fecha de creación del pedido.
-*   `{{tracking_number}}`: Número de seguimiento del último envío.
-*   `{{tracking_url}}`: URL de seguimiento del último envío.
-*   `{{delivery_status}}`: Estado actual de la entrega del pedido (ej. DELIVERED, IN_TRANSIT, TRACKING ADDED).
-*   `{{carrier_name}}`: Nombre de la empresa de transporte (ej. USPS, FedEx).
-*   `{{expected_delivery_date}}`: Fecha estimada de entrega del pedido.
-*   `{{delivery_location}}`: Ubicación específica donde se entregó el paquete (ej. buzón, puerta principal).
-*   `{{delivery_date}}`: Fecha en que se entregó el paquete.
-*   `{{delivery_address}}`: Dirección completa de entrega del paquete.
-*   `{{delivery_delay_days}}`: Número de días de retraso en la entrega.
-*   `{{product_details}}`: Detalles de los productos incluidos en el envío (nombre, cantidad, etc.).
-*   `{{product_quantity}}`: Cantidad de un producto específico.
-*   `{{product_name}}`: Nombre de un producto específico.
-
-Asegúrate de que tus plantillas incluyan estos placeholders donde desees que aparezca la información dinámica.
+## Marcadores de Posición (Placeholders)
+
+Para que la personalización funcione, es esencial que las plantillas en Notion usen marcadores de posición con el formato `{{nombre_del_campo}}`. Estos serán reemplazados por datos de Shopify o extraídos del correo.
+
+| Marcador de Posición (`Placeholder`) | Valor de Reemplazo                                                               | Ejemplo                                              |
+| ------------------------------------ | -------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `{{customer_name}}`                  | Primer nombre del cliente.                                                       | `John`                                               |
+| `{{customer_full_name}}`             | Nombre y apellido del cliente.                                                   | `John Doe`                                           |
+| `{{customer_email}}`                 | Correo electrónico del cliente.                                                  | `john.doe@example.com`                               |
+| `{{order_id}}`                       | Número del último pedido del cliente.                                            | `1051`                                               |
+| `{{order_date}}`                     | Fecha en que se creó el pedido.                                                  | `10/10/2025`                                         |
+| `{{tracking_number}}`                | Número de seguimiento y URL del envío.                                           | `1Z999AA10123456789 (https://www.ups.com/track?...)` |
+| `{{order_items}}`                    | Lista de artículos en el pedido.                                                 | `1x Awesome T-Shirt, 2x Cool Mug`                    |
+| `{{delivery_status}}`                | Estado del envío (ej. `in_transit`, `delivered`).                                | `in_transit`                                         |
+| `{{carrier_name}}`                   | Nombre de la empresa de transporte.                                              | `UPS`                                                |
+| `{{expected_delivery_date}}`         | Fecha de entrega estimada proporcionada por el transportista.                    | `viernes, 17 de octubre de 2025`                     |
+| `{{delivery_location}}`              | Primera línea de la dirección de envío.                                          | `123 Main St`                                        |
+| `{{delivery_date}}`                  | Fecha en que se entregó el paquete.                                              | `15/10/2025`                                         |
+| `{{shipping_address}}`               | Dirección de envío completa.                                                     | `123 Main St, Anytown, CA 12345, USA`                 |
+| `{{delivery_delay_days}}`            | Días de retraso entre la fecha estimada y la real.                               | `3`                                                  |
+| `{{days_since_delivery}}`            | Días transcurridos desde la entrega del paquete.                                 | `2`                                                  |
+| `{{product_details}}`                | Detalles de los productos (cantidad, nombre y SKU).                              | `1x Awesome T-Shirt (SKU: TSH-BL-L)`                 |
+| `{{product_quantity}}`               | Cantidades de los artículos del pedido.                                          | `1, 2`                                               |
+| `{{product_name}}`                   | Nombres de los artículos del pedido.                                             | `Awesome T-Shirt, Cool Mug`                          |
