@@ -47,6 +47,7 @@ Para que la personalización funcione, es esencial que las plantillas en Notion 
 | `{{product_details}}`                | Detalles de los productos (cantidad, nombre y SKU).                              | `1x Awesome T-Shirt (SKU: TSH-BL-L)`                 |
 | `{{product_quantity}}`               | Cantidades de los artículos del pedido.                                          | `1, 2`                                               |
 | `{{product_name}}`                   | Nombres de los artículos del pedido.                                             | `Awesome T-Shirt, Cool Mug`                          |
+| `{{unfulfilled_items}}`              | Lista de artículos pendientes de envío (cantidad, nombre y SKU).                 | `1x Awesome T-Shirt (SKU: TSH-BL-L)`                 |
 
 ## Datos Obtenidos de la API de Shopify
 
@@ -77,3 +78,4 @@ A continuación se detallan los campos específicos extraídos de la API de Shop
 | `name`                  | `Line Item`           | Nombre del producto.                                              |
 | `quantity`              | `Line Item`           | Cantidad del producto.                                            |
 | `sku`                   | `Line Item`           | SKU (Stock Keeping Unit) del producto.                            |
+| `fulfillable_quantity`  | `Line Item`           | Cantidad de un artículo que aún no se ha enviado.                 |

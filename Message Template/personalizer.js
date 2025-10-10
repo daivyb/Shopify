@@ -32,6 +32,7 @@ function personalizeTemplate(template, emailBody, customer, latestOrder) {
     'delivery_delay_days': calculateDeliveryDelay(latestOrder),
     'days_since_delivery': calculateDaysSinceDelivery(latestOrder), // New placeholder
     'product_details': latestOrder ? formatProductDetails(latestOrder.line_items) : null, // Requires a new helper function
+    'unfulfilled_items': latestOrder ? formatUnfulfilledItems(latestOrder.line_items) : null,
     'product_quantity': latestOrder && latestOrder.line_items && latestOrder.line_items.length > 0 ? latestOrder.line_items.map(item => item.quantity).join(', ') : null,
     'product_name': latestOrder && latestOrder.line_items && latestOrder.line_items.length > 0 ? latestOrder.line_items.map(item => item.name).join(', ') : null,
   };
@@ -178,4 +179,19 @@ function calculateDaysSinceDelivery(order) {
 function formatProductDetails(lineItems) {
   if (!lineItems || lineItems.length === 0) return null;
   return lineItems.map(item => `${item.quantity}x ${item.name} (SKU: ${item.sku || 'N/A'})`).join(', ');
+}
+
+/**
+ * Formats a list of unfulfilled line items into a string.
+ * @param {Array} lineItems Array of Shopify line item objects.
+ * @returns {string|null} A formatted string of unfulfilled items or null.
+ */
+function formatUnfulfilledItems(lineItems) {
+  if (!lineItems || lineItems.length === 0) return null;
+
+  const unfulfilled = lineItems.filter(item => item.fulfillable_quantity > 0);
+
+  if (unfulfilled.length === 0) return null;
+
+  return unfulfilled.map(item => `${item.fulfillable_quantity}x ${item.name} - SKU: ${item.sku || 'N/A'}`).join(',');
 }
