@@ -47,3 +47,33 @@ Para que la personalización funcione, es esencial que las plantillas en Notion 
 | `{{product_details}}`                | Detalles de los productos (cantidad, nombre y SKU).                              | `1x Awesome T-Shirt (SKU: TSH-BL-L)`                 |
 | `{{product_quantity}}`               | Cantidades de los artículos del pedido.                                          | `1, 2`                                               |
 | `{{product_name}}`                   | Nombres de los artículos del pedido.                                             | `Awesome T-Shirt, Cool Mug`                          |
+
+## Datos Obtenidos de la API de Shopify
+
+A continuación se detallan los campos específicos extraídos de la API de Shopify y el objeto del cual provienen.
+
+| Campo                   | Objeto de Origen      | Descripción Breve                                                 |
+| ----------------------- | --------------------- | ----------------------------------------------------------------- |
+| `id`                    | `Customer`            | ID único del cliente.                                             |
+| `first_name`            | `Customer`            | Nombre del cliente.                                               |
+| `last_name`             | `Customer`            | Apellido del cliente.                                             |
+| `email`                 | `Customer`            | Correo del cliente.                                               |
+| `id`                    | `Order`               | ID único del pedido.                                              |
+| `order_number`          | `Order`               | Número de pedido visible para el cliente.                         |
+| `created_at`            | `Order`               | Fecha de creación del pedido.                                     |
+| `financial_status`      | `Order`               | Estado financiero del pedido.                                     |
+| `fulfillment_status`    | `Order`               | Estado de preparación del pedido (`partial`, `fulfilled`, etc.).  |
+| `shipping_address`      | `Order`               | Objeto con la dirección de envío completa.                        |
+| `line_items`            | `Order`               | Lista de productos (artículos de línea) en el pedido.             |
+| `fulfillments`          | `Order`               | Lista de envíos asociados al pedido.                              |
+| `fulfillment_orders`    | `Order`               | Lista de pedidos de preparación.                                  |
+| `tracking_number`       | `Fulfillment`         | Número de seguimiento del envío.                                  |
+| `tracking_url`          | `Fulfillment`         | URL de seguimiento del envío.                                     |
+| `tracking_company`      | `Fulfillment`         | Nombre de la empresa de transporte.                               |
+| `shipment_status`       | `Fulfillment`         | Estado detallado del envío (`in_transit`, `delivered`, etc.).     |
+| `delivered_at`          | `Fulfillment`         | Fecha en que se entregó el envío.                                 |
+| `estimated_delivery_at` | `Fulfillment Event`   | Fecha estimada de entrega (obtenida de los eventos del envío).    |
+| `max_delivery_date_time`| `FulfillmentOrder`    | Fecha máxima de entrega (obtenida desde `delivery_method`).       |
+| `name`                  | `Line Item`           | Nombre del producto.                                              |
+| `quantity`              | `Line Item`           | Cantidad del producto.                                            |
+| `sku`                   | `Line Item`           | SKU (Stock Keeping Unit) del producto.                            |

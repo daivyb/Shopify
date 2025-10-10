@@ -70,27 +70,17 @@ function getTrackingInfo(order) {
 }
 
 /**
- * Obtiene la fecha de entrega del transportista desde los datos del pedido.
- * Prioriza la fecha máxima de entrega del 'fulfillment order'.
+ * Obtiene la fecha de entrega estimada del transportista desde los eventos del 'fulfillment'.
  * @param {Object} order El objeto del pedido de Shopify.
  * @returns {string|null} La fecha de entrega formateada o null si no se encuentra.
  */
 function getCarrierDeliveryDate(order) {
-  // Prioridad 1: Usar la fecha máxima de entrega del transportista si existe.
-  if (order && order.fulfillment_orders && order.fulfillment_orders.length > 0) {
-    const fo = order.fulfillment_orders[0]; // Usar el primer fulfillment order
-    if (fo.delivery_method && fo.delivery_method.maxDeliveryDateTime) {
-      const maxDateStr = fo.delivery_method.maxDeliveryDateTime;
-      return new Date(maxDateStr).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    }
-  }
-
-  // Prioridad 2: Fallback al 'estimated_delivery_at' del fulfillment.
+  // Usa el 'estimated_delivery_at' inyectado desde los eventos del fulfillment.
   if (order && order.fulfillments && order.fulfillments.length > 0 && order.fulfillments[0].estimated_delivery_at) {
     return new Date(order.fulfillments[0].estimated_delivery_at).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   }
 
-  // Fallback final si no se encuentra ninguna fecha.
+  // Fallback si no se encuentra ninguna fecha.
   return null;
 }
 
