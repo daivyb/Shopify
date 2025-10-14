@@ -9,6 +9,13 @@
 function createDraftReplies() {
   Logger.log('Iniciando el proceso de creación de borradores inteligentes...');
 
+  // 1. Obtener la lista de TODAS las etiquetas configuradas en Notion UNA SOLA VEZ.
+  const configuredLabels = getAllConfiguredLabels();
+  if (!configuredLabels || configuredLabels.length === 0) {
+    Logger.log('No se encontraron labels configurados en la BD Maestra de Notion o hubo un error. Finalizando ejecución.');
+    return;
+  }
+
   const threads = findThreadsToProcess();
   if (threads.length === 0) {
     Logger.log('No hay correos nuevos para procesar.');
@@ -20,16 +27,25 @@ function createDraftReplies() {
   threads.forEach(thread => {
     const threadId = thread.getId();
 
-    // Primero, verificar la clasificación y si existen plantillas, sin registrar nada aún.
-    const classificationLabel = getClassificationLabel(thread, getTagReferences());
+    const classificationLabel = getClassificationLabel(thread, tagReferences);
     if (!classificationLabel) {
-      return; // Omitir silenciosamente si no hay etiqueta de clasificación
+      return; // Omitir silenciosamente si no tiene una etiqueta de clasificación conocida.
     }
 
+    // 2. FILTRAR: Si la etiqueta del correo no está en la lista de configuración, ignorar y saltar al siguiente.
+    if (!configuredLabels.includes(classificationLabel)) {
+      return; // Ignorar silenciosamente, esto elimina los logs para 'Faire', etc.
+    }
+
+    // De aquí en adelante, el código solo se ejecuta para etiquetas que SÍ están configuradas.
     const allTemplates = getAllTemplatesForLabel(classificationLabel);
     if (!allTemplates) {
-      return; // Omitir silenciosamente si la etiqueta no corresponde a una BD en Notion
+      // Este return ahora solo se activa si el label está en la BD Master pero el ID está vacío o la BD de plantillas no existe.
+      return;
     }
+
+    // Marcar como procesado para no re-analizar, incluso si falla después.
+    applyProcessedLabel(threadId);
 
     // --- AHORA, SI PASA LOS FILTROS, INICIAMOS EL LOG ---
     const messageDetails = getFirstMessageDetails(thread); 
@@ -106,7 +122,6 @@ function createDraftReplies() {
 
     const personalizedMessage = personalizeTemplate(selectedTemplate, messageDetails.body, customer, latestOrder);
     createDraftReply(threadId, personalizedMessage);
-    applyProcessedLabel(threadId);
     
     Logger.log(`  > Acción: Borrador creado con la plantilla "${geminiChoice}".`);
     Logger.log(`[FIN] Hilo ID: ${threadId}`);

@@ -6,19 +6,44 @@ const TRIGGER_LABEL = 'GeminiLabeled'; // Etiqueta que dispara el proceso
 const PROCESSED_LABEL = 'GeminiMessage'; // Etiqueta para marcar como procesado
 
 /**
- * Busca hilos de correo que necesitan ser procesados (a partir de ayer).
+ * Busca hilos de correo que necesitan ser procesados, usando paginación para obtener todos los resultados.
  * @returns {GoogleAppsScript.Gmail.GmailThread[]} Una lista de hilos de Gmail.
  */
 function findThreadsToProcess() {
   const query = `label:${TRIGGER_LABEL} -label:${PROCESSED_LABEL}`;
-  
+  let allThreads = [];
+  let pageToken = null;
+  let page = 1;
+
   try {
-    Logger.log(`Ejecutando búsqueda en Gmail con la consulta: "${query}"`);
-    const threads = GmailApp.search(query);
-    Logger.log(`Se encontraron ${threads.length} hilos para procesar.`);
-    return threads;
+    Logger.log(`Ejecutando búsqueda paginada en Gmail con la consulta: "${query}"`);
+
+    do {
+      const response = Gmail.Users.Threads.list('me', {
+        q: query,
+        maxResults: 500, // Get the max allowed per page
+        pageToken: pageToken
+      });
+
+      if (response.threads && response.threads.length > 0) {
+        const threadIds = response.threads.map(thread => thread.id);
+        const threads = threadIds.map(id => GmailApp.getThreadById(id));
+        allThreads = allThreads.concat(threads);
+        Logger.log(`Página ${page}: Se encontraron ${threads.length} hilos. Total acumulado: ${allThreads.length}`);
+      }
+
+      pageToken = response.nextPageToken;
+      page++;
+    } while (pageToken);
+
+    Logger.log(`Búsqueda paginada completa. Se encontraron un total de ${allThreads.length} hilos para procesar.`);
+    return allThreads;
+
   } catch (e) {
-    Logger.log(`Error al buscar hilos en Gmail: ${e.toString()}`);
+    Logger.log(`Error al buscar hilos en Gmail con paginación: ${e.toString()}`);
+    if (e.details && e.details.errors) {
+      Logger.log(`Detalles del error de la API de Gmail: ${JSON.stringify(e.details.errors)}`);
+    }
     return [];
   }
 }

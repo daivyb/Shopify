@@ -136,3 +136,66 @@ function getAllTemplatesForLabel(label) {
     return null;
   }
 }
+
+/**
+ * Obtiene todos los labels configurados en la BD maestra de Notion.
+ * @returns {string[]} Un array con todos los nombres de los labels configurados.
+ */
+function getAllConfiguredLabels() {
+  if (!MASTER_DATABASE_ID) {
+    Logger.log('Error: MASTER_DATABASE_ID no está configurado en las Script Properties.');
+    return [];
+  }
+
+  const url = `${NOTION_API_BASE_URL}databases/${MASTER_DATABASE_ID}/query`;
+  const options = {
+    method: 'post',
+    contentType: 'application/json',
+    headers: {
+      'Authorization': `Bearer ${NOTION_API_KEY}`,
+      'Notion-Version': NOTION_VERSION,
+    },
+    muteHttpExceptions: true,
+  };
+
+  let allLabels = [];
+  let hasMore = true;
+  let startCursor = undefined;
+
+  try {
+    Logger.log('Obteniendo lista de labels configurados desde Notion...');
+    while (hasMore) {
+      // El payload debe estar dentro del loop para actualizar el start_cursor
+      options.payload = JSON.stringify({ start_cursor: startCursor });
+
+      const response = UrlFetchApp.fetch(url, options);
+      const responseCode = response.getResponseCode();
+      const responseBody = response.getContentText();
+
+      if (responseCode !== 200) {
+        Logger.log(`Error al consultar la base de datos maestra de Notion. Código: ${responseCode}. Respuesta: ${responseBody}`);
+        return []; // Retornar array vacío en caso de error
+      }
+
+      const data = JSON.parse(responseBody);
+      const results = data.results;
+
+      if (results && results.length > 0) {
+        // La propiedad a buscar es 'Label', que es de tipo 'title'
+        const labels = results.map(page => getPlainTextFromProperty(page.properties['Label']));
+        allLabels = allLabels.concat(labels);
+      }
+
+      hasMore = data.has_more;
+      startCursor = data.next_cursor;
+    }
+
+    const nonEmptyLabels = allLabels.filter(label => label); // Filtrar vacíos
+    Logger.log(`Se encontraron ${nonEmptyLabels.length} labels configurados.`);
+    return nonEmptyLabels;
+
+  } catch (e) {
+    Logger.log(`Excepción al obtener todos los labels de Notion: ${e.toString()}`);
+    return []; // Retornar array vacío en caso de excepción
+  }
+}
