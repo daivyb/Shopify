@@ -200,7 +200,11 @@ function buildPromptForBestResponse(messageDetails, allTemplates, customer, late
     imageInfo = '\n--- NOTA ADICIONAL ---\nEl cliente YA HA ADJUNTADO imágenes en este correo.\n';
   }
 
-  return `Analiza el siguiente correo electrónico de un cliente y elige la plantilla de respuesta más adecuada de la lista proporcionada. Responde únicamente con el ID de la plantilla seleccionada (por ejemplo, "Pedido perdido::Respuesta_A").\n\n---\nCORREO DEL CLIENTE ---\n${messageDetails.body}${imageInfo}${customerInfo}${orderInfo}\n\n---\nPLANTILLAS DISPONIBLES ---\n${optionsText}`;
+  const baseInstruction = 'Analiza el siguiente correo electrónico de un cliente y elige la plantilla de respuesta más adecuada de la lista proporcionada.';
+  const specialRule = "REGLA IMPORTANTE: Presta especial atención a la lista de 'Productos'. Si el cliente reporta un problema con un producto (ej. faltante o dañado) y en el pedido solo hay un tipo de artículo, DEBES elegir una plantilla que resuelva el problema de forma proactiva (ej. que confirme un reemplazo) en lugar de una que pida más información.";
+  const outputFormatInstruction = 'Responde únicamente con el ID de la plantilla seleccionada (por ejemplo, "Pedido perdido::Respuesta_A").';
+
+  return `${baseInstruction}\n${specialRule}\n${outputFormatInstruction}\n\n---\nCORREO DEL CLIENTE ---\n${messageDetails.body}${imageInfo}${customerInfo}${orderInfo}\n\n---\nPLANTILLAS DISPONIBLES ---\n${optionsText}`;
 }
 
 /**
