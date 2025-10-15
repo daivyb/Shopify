@@ -55,12 +55,22 @@ function findThreadsToProcess() {
  * @returns {string|null} El nombre de la etiqueta de clasificación o null.
  */
 function getClassificationLabel(thread, tagReferences) {
-  const threadLabels = thread.getLabels().map(label => label.getName());
+  const threadLabels = thread.getLabels();
   const knownTags = tagReferences.map(t => t.tag);
   
   for (const label of threadLabels) {
-    if (knownTags.includes(label)) {
-      return label;
+    let labelName;
+    try {
+      labelName = label.getName();
+    } catch (e) {
+      // Si una etiqueta fue eliminada pero aún está en el cache del hilo, puede dar este error.
+      // Lo ignoramos y continuamos con la siguiente etiqueta.
+      Logger.log(`No se pudo obtener el nombre de una etiqueta en el hilo ${thread.getId()}. Error: ${e.toString()}`);
+      continue;
+    }
+
+    if (knownTags.includes(labelName)) {
+      return labelName;
     }
   }
   

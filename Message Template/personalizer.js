@@ -78,7 +78,14 @@ function getTrackingInfo(order) {
 function getCarrierDeliveryDate(order) {
   // Usa el 'estimated_delivery_at' inyectado desde los eventos del fulfillment.
   if (order && order.fulfillments && order.fulfillments.length > 0 && order.fulfillments[0].estimated_delivery_at) {
-    return new Date(order.fulfillments[0].estimated_delivery_at).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const dateOptions = { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      timeZone: 'UTC' // Clave para evitar el error de día
+    };
+    return new Date(order.fulfillments[0].estimated_delivery_at).toLocaleDateString('en-US', dateOptions);
   }
 
   // Fallback si no se encuentra ninguna fecha.
