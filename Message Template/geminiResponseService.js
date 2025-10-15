@@ -54,7 +54,14 @@ function getGeminiResponse(prompt) {
       const data = JSON.parse(responseBody);
       // Navegar la estructura de respuesta de Gemini API v1beta
       if (data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts.length > 0) {
-        return data.candidates[0].content.parts[0].text.trim();
+        let normalizedText = data.candidates[0].content.parts[0].text;
+
+        // Normalizar el texto: quitar espacios, reemplazar múltiples espacios y eliminar comillas circundantes.
+        normalizedText = normalizedText.trim().replace(/\s+/g, ' ');
+        if ((normalizedText.startsWith('"') && normalizedText.endsWith('"')) || (normalizedText.startsWith("'") && normalizedText.endsWith("'"))) {
+          normalizedText = normalizedText.substring(1, normalizedText.length - 1);
+        }
+        return normalizedText;
       } else {
         Logger.log('La respuesta de Gemini no tiene el formato esperado. Respuesta completa: ' + responseBody);
         return null;

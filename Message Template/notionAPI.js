@@ -19,7 +19,14 @@ function getPlainTextFromProperty(property) {
   if (!property) return '';
   const propertyType = property.type;
   if (property[propertyType] && Array.isArray(property[propertyType])) {
-    return property[propertyType].map(item => item.text.content).join('');
+    let normalizedText = property[propertyType].map(item => item.text.content).join('');
+    
+    // Normalizar el texto: quitar espacios, reemplazar múltiples espacios y eliminar comillas circundantes.
+    normalizedText = normalizedText.trim().replace(/\s+/g, ' ');
+    if ((normalizedText.startsWith('"') && normalizedText.endsWith('"')) || (normalizedText.startsWith("'") && normalizedText.endsWith("'"))) {
+      normalizedText = normalizedText.substring(1, normalizedText.length - 1);
+    }
+    return normalizedText;
   }
   return '';
 }
