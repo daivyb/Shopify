@@ -29,12 +29,11 @@ function getGeminiResponse(prompt) {
         ],
       },
     ],
-    // Opcional: Configuración para controlar la generación de la respuesta
     generationConfig: {
         temperature: 0.2,
         topK: 1,
         topP: 1,
-        maxOutputTokens: 2048,
+        maxOutputTokens: 4096,
     },
   };
 
@@ -42,7 +41,7 @@ function getGeminiResponse(prompt) {
     method: 'post',
     contentType: 'application/json',
     payload: JSON.stringify(payload),
-    muteHttpExceptions: true, // Para poder manejar errores de la API
+    muteHttpExceptions: true, 
   };
 
   try {
@@ -52,18 +51,27 @@ function getGeminiResponse(prompt) {
 
     if (responseCode === 200) {
       const data = JSON.parse(responseBody);
-      // Navegar la estructura de respuesta de Gemini API v1beta
-      if (data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts.length > 0) {
-        let normalizedText = data.candidates[0].content.parts[0].text;
 
-        // Normalizar el texto: quitar espacios, reemplazar múltiples espacios y eliminar comillas circundantes.
+      // Si la respuesta no tiene candidatos, probablemente fue bloqueada por seguridad.
+      if (!data.candidates || data.candidates.length === 0) {
+        if (data.promptFeedback && data.promptFeedback.blockReason) {
+          Logger.log(`La respuesta de Gemini fue bloqueada. Razón: ${data.promptFeedback.blockReason}.`);
+        } else {
+          Logger.log('La respuesta de Gemini no contiene "candidates". Respuesta completa: ' + responseBody);
+        }
+        return null;
+      }
+
+      // Procesa la respuesta si es válida
+      if (data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts.length > 0) {
+        let normalizedText = data.candidates[0].content.parts[0].text;
         normalizedText = normalizedText.trim().replace(/\s+/g, ' ');
         if ((normalizedText.startsWith('"') && normalizedText.endsWith('"')) || (normalizedText.startsWith("'") && normalizedText.endsWith("'"))) {
           normalizedText = normalizedText.substring(1, normalizedText.length - 1);
         }
         return normalizedText;
       } else {
-        Logger.log('La respuesta de Gemini no tiene el formato esperado. Respuesta completa: ' + responseBody);
+        Logger.log('La estructura del "candidate" de Gemini no es la esperada. Respuesta completa: ' + responseBody);
         return null;
       }
     } else {

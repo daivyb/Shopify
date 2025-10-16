@@ -102,7 +102,6 @@ function getCustomerLatestOrderDetails(customerId) {
                 const eventWithEstimate = events.find(event => event.estimated_delivery_at);
                 if (eventWithEstimate) {
                   fulfillment.estimated_delivery_at = eventWithEstimate.estimated_delivery_at;
-                  Logger.log(`Fecha de entrega estimada encontrada en eventos: ${fulfillment.estimated_delivery_at}`);
                 }
                 
                 // Inyectamos la fecha de entrega en el objeto para que personalizer.js la pueda usar.
@@ -272,7 +271,10 @@ function getAllShopifyLocations() {
     const jsonResponse = JSON.parse(response.getContentText());
     
     if (jsonResponse.locations && jsonResponse.locations.length > 0) {
-      Logger.log(`Se encontraron ${jsonResponse.locations.length} ubicaciones de Shopify.`);
+      Logger.log(`Se encontraron ${jsonResponse.locations.length} ubicaciones de Shopify:`);
+    jsonResponse.locations.forEach(loc => {
+      Logger.log(`  - ${loc.city || 'N/A'}, ${loc.province || 'N/A'} ${loc.zip || 'N/A'}, ${loc.country || 'N/A'}`);
+    });
       // Extraer solo los campos relevantes para el prompt
       return jsonResponse.locations.map(location => ({
         city: location.city,

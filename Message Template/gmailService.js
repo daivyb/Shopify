@@ -112,15 +112,51 @@ function getFirstMessageDetails(thread) {
 /**
  * Crea un borrador de respuesta en un hilo.
  * @param {string} threadId El ID del hilo.
- * @param {string} body El contenido del borrador.
+ * @param {string} body El contenido de texto plano del borrador (usado para el extracto en la vista de lista de Gmail).
+ * @param {Object} options Opciones adicionales, como el cuerpo en HTML.
  */
-function createDraftReply(threadId, body) {
+function createDraftReply(threadId, body, options) {
   try {
     const thread = GmailApp.getThreadById(threadId);
-    thread.createDraftReply(body);
+    thread.createDraftReply(body, options);
     Logger.log(`Borrador creado para el hilo ${threadId}.`);
   } catch (e) {
     Logger.log(`Error al crear el borrador para el hilo ${threadId}: ${e.toString()}`);
+  }
+}
+
+/**
+ * Obtiene la firma de Gmail predeterminada del usuario.
+ * Utiliza la API avanzada de Gmail y guarda el resultado en caché para optimizar.
+ * @returns {string|null} La firma en formato HTML o null si no se encuentra.
+ */
+function getGmailSignature() {
+  const cache = CacheService.getScriptCache();
+  const cachedSignature = cache.get('gmail_signature');
+  if (cachedSignature != null) {
+    return cachedSignature;
+  }
+
+  try {
+    const primaryEmail = Session.getEffectiveUser().getEmail();
+    if (!primaryEmail) {
+      Logger.log("No se pudo obtener el email del usuario activo.");
+      return null;
+    }
+
+    const sendAs = Gmail.Users.Settings.SendAs.get('me', primaryEmail);
+    if (sendAs && sendAs.signature) {
+      Logger.log("Firma de Gmail obtenida y guardada en caché.");
+      cache.put('gmail_signature', sendAs.signature, 21600); // Cache por 6 horas
+      return sendAs.signature;
+    }
+    
+    Logger.log("No se encontró una firma para la dirección de correo principal.");
+    return null;
+
+  } catch (e) {
+    Logger.log(`Error al obtener la firma de Gmail: ${e.toString()}`);
+    return null;
   }
 }
 

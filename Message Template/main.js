@@ -9,6 +9,9 @@
 function createDraftReplies() {
   Logger.log('Iniciando el proceso de creación de borradores inteligentes...');
 
+  // Obtener la firma de Gmail UNA SOLA VEZ al inicio para optimizar.
+  const signature = getGmailSignature();
+
   // 1. Obtener la lista de TODAS las etiquetas configuradas en Notion UNA SOLA VEZ.
   const configuredLabels = getAllConfiguredLabels();
   if (!configuredLabels || configuredLabels.length === 0) {
@@ -28,7 +31,6 @@ function createDraftReplies() {
   const shopifyLocations = getAllShopifyLocations();
   if (!shopifyLocations || shopifyLocations.length === 0) {
     Logger.log('No se encontraron ubicaciones de Shopify. La lógica de devolución al almacén no funcionará.');
-    // Continue without this feature, or return? For now, let's continue.
   }
 
   threads.forEach(thread => {
@@ -36,25 +38,20 @@ function createDraftReplies() {
 
     const classificationLabel = getClassificationLabel(thread, tagReferences);
     if (!classificationLabel) {
-      return; // Omitir silenciosamente si no tiene una etiqueta de clasificación conocida.
+      return; 
     }
 
-    // 2. FILTRAR: Si la etiqueta del correo no está en la lista de configuración, ignorar y saltar al siguiente.
     if (!configuredLabels.includes(classificationLabel)) {
-      return; // Ignorar silenciosamente, esto elimina los logs para 'Faire', etc.
+      return; 
     }
 
-    // De aquí en adelante, el código solo se ejecuta para etiquetas que SÍ están configuradas.
     const allTemplates = getAllTemplatesForLabel(classificationLabel);
     if (!allTemplates) {
-      // Este return ahora solo se activa si el label está en la BD Master pero el ID está vacío o la BD de plantillas no existe.
       return;
     }
 
-    // Marcar como procesado para no re-analizar, incluso si falla después.
     applyProcessedLabel(threadId);
 
-    // --- AHORA, SI PASA LOS FILTROS, INICIAMOS EL LOG ---
     const messageDetails = getFirstMessageDetails(thread); 
 
     Logger.log('--------------------------------------------------');
@@ -72,7 +69,6 @@ function createDraftReplies() {
 
     Logger.log(`  > Clasificación: ${classificationLabel}`);
 
-    // Customer and Order Info
     const customer = getCustomerDetails(messageDetails.from);
     let latestOrder = null;
     if (customer && customer.id) {
@@ -85,13 +81,16 @@ function createDraftReplies() {
 
         if (latestOrder.fulfillments && latestOrder.fulfillments.length > 0) {
             const fulfillment = latestOrder.fulfillments[0];
-            const expectedDate = fulfillment.estimated_delivery_at ? new Date(fulfillment.estimated_delivery_at).toLocaleDateString() : 'N/A';
-            const deliveryDate = fulfillment.delivered_at ? new Date(fulfillment.delivered_at).toLocaleDateString() : 'N/A';
             const delayDays = calculateDeliveryDelay(latestOrder);
             const sinceDeliveryDays = calculateDaysSinceDelivery(latestOrder);
 
             Logger.log(`  > Info Envío:`);
-            Logger.log(`    - Fecha de Entrega: ${deliveryDate}`);
+            if (fulfillment.estimated_delivery_at) {
+              Logger.log(`    - Fecha de entrega estimada: ${fulfillment.estimated_delivery_at}`);
+            }
+            if (fulfillment.delivered_at) {
+              Logger.log(`    - Fecha de entrega real: ${fulfillment.delivered_at}`);
+            }
             if (delayDays !== null) {
                 Logger.log(`    - Retraso (días): ${delayDays}`);
             }
@@ -105,7 +104,6 @@ function createDraftReplies() {
         Logger.log(`  > Cliente: No encontrado en Shopify.`);
     }
     
-    // Build prompt and get Gemini response
     const prompt = buildPromptForBestResponse(messageDetails, allTemplates, customer, latestOrder, shopifyLocations);
     const geminiChoice = getGeminiResponse(prompt);
 
@@ -117,7 +115,6 @@ function createDraftReplies() {
     }
     Logger.log(`  > Decisión de Gemini: ${geminiChoice}`);
 
-    // Personalize and create draft
     const selectedTemplate = findTemplateFromGeminiChoice(geminiChoice, allTemplates);
     if (!selectedTemplate) {
       Logger.log(`  > Error: La elección de Gemini (${geminiChoice}) no corresponde a ninguna plantilla.`);
@@ -127,7 +124,13 @@ function createDraftReplies() {
     }
 
     const personalizedMessage = personalizeTemplate(selectedTemplate, messageDetails.body, customer, latestOrder);
-    createDraftReply(threadId, personalizedMessage);
+    
+    // Construir el cuerpo del correo en HTML y añadir la firma.
+    const messageBodyHtml = personalizedMessage.replace(/\n/g, '<br>');
+    const finalHtmlBody = signature ? `${messageBodyHtml}<br><br>${signature}` : messageBodyHtml;
+
+    // Crear el borrador usando el cuerpo HTML. El texto plano se usa para el snippet.
+    createDraftReply(threadId, personalizedMessage, { htmlBody: finalHtmlBody });
     
     Logger.log(`  > Acción: Borrador creado con la plantilla "${geminiChoice}".`);
     Logger.log(`[FIN] Hilo ID: ${threadId}`);

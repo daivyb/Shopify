@@ -151,7 +151,16 @@ function calculateDeliveryDelay(order) {
   if (fulfillment.shipment_status === 'delivered' && fulfillment.delivered_at && fulfillment.estimated_delivery_at) {
     const deliveredDate = new Date(fulfillment.delivered_at);
     const estimatedDate = new Date(fulfillment.estimated_delivery_at);
-    const diffTime = Math.abs(deliveredDate - estimatedDate);
+    
+    // Calculate the difference in time
+    const diffTime = deliveredDate.getTime() - estimatedDate.getTime();
+
+    // If the difference is negative or zero, the package was not delayed.
+    if (diffTime <= 0) {
+      return 0;
+    }
+
+    // Convert the positive difference in milliseconds to days
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
   }
