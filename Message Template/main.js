@@ -24,6 +24,13 @@ function createDraftReplies() {
 
   const tagReferences = getTagReferences();
 
+  // Fetch all Shopify locations once at the beginning
+  const shopifyLocations = getAllShopifyLocations();
+  if (!shopifyLocations || shopifyLocations.length === 0) {
+    Logger.log('No se encontraron ubicaciones de Shopify. La lógica de devolución al almacén no funcionará.');
+    // Continue without this feature, or return? For now, let's continue.
+  }
+
   threads.forEach(thread => {
     const threadId = thread.getId();
 
@@ -84,7 +91,6 @@ function createDraftReplies() {
             const sinceDeliveryDays = calculateDaysSinceDelivery(latestOrder);
 
             Logger.log(`  > Info Envío:`);
-            Logger.log(`    - Promesa de Entrega - Carrier: ${expectedDate}`);
             Logger.log(`    - Fecha de Entrega: ${deliveryDate}`);
             if (delayDays !== null) {
                 Logger.log(`    - Retraso (días): ${delayDays}`);
@@ -100,7 +106,7 @@ function createDraftReplies() {
     }
     
     // Build prompt and get Gemini response
-    const prompt = buildPromptForBestResponse(messageDetails, allTemplates, customer, latestOrder);
+    const prompt = buildPromptForBestResponse(messageDetails, allTemplates, customer, latestOrder, shopifyLocations);
     const geminiChoice = getGeminiResponse(prompt);
 
     if (!geminiChoice) {
@@ -139,7 +145,7 @@ function createDraftReplies() {
  * @param {Object|null} latestOrder Detalles del último pedido del cliente de Shopify.
  * @returns {string} El prompt completo.
  */
-function buildPromptForBestResponse(messageDetails, allTemplates, customer, latestOrder) {
+function buildPromptForBestResponse(messageDetails, allTemplates, customer, latestOrder, shopifyLocations) {
   let optionsText = '\n';
   Object.keys(allTemplates).forEach(context => {
     Object.keys(allTemplates[context]).forEach(responseKey => {
@@ -171,8 +177,6 @@ function buildPromptForBestResponse(messageDetails, allTemplates, customer, late
       orderInfo += `Transportista: ${firstFulfillment.tracking_company || 'N/A'}\n`;
       orderInfo += `Número de Seguimiento: ${firstFulfillment.tracking_number || 'N/A'}\n`;
       orderInfo += `URL de Seguimiento: ${firstFulfillment.tracking_url || 'N/A'}\n`;
-    } else {
-      orderInfo += `Estado Detallado del Envío: No Enviado\n`;
     }
 
     // Calcular y añadir datos de tiempo para dar más contexto a la IA
@@ -193,6 +197,16 @@ function buildPromptForBestResponse(messageDetails, allTemplates, customer, late
         orderInfo += `  - ${item.quantity} x ${item.name} (SKU: ${item.sku || 'N/A'})\n`;
       });
     }
+
+    // Add last tracking event details
+    if (latestOrder.fulfillments && latestOrder.fulfillments.length > 0 && latestOrder.fulfillments[0].last_tracking_event) {
+      const lastEvent = latestOrder.fulfillments[0].last_tracking_event;
+      orderInfo += `\n--- ÚLTIMO EVENTO DE SEGUIMIENTO ---\n`;
+      orderInfo += `Estado: ${lastEvent.status || 'N/A'}\n`;
+      orderInfo += `Mensaje: ${lastEvent.message || 'N/A'}\n`;
+      orderInfo += `Fecha/Hora: ${lastEvent.happened_at || 'N/A'}\n`;
+      orderInfo += `Ubicación: ${lastEvent.city || 'N/A'}, ${lastEvent.province || 'N/A'}, ${lastEvent.country || 'N/A'} (CP: ${lastEvent.zip || 'N/A'})\n`;
+    }
   }
 
   let imageInfo = '';
@@ -200,11 +214,20 @@ function buildPromptForBestResponse(messageDetails, allTemplates, customer, late
     imageInfo = '\n--- NOTA ADICIONAL ---\nEl cliente YA HA ADJUNTADO imágenes en este correo.\n';
   }
 
+  let locationsInfo = '';
+  if (shopifyLocations && shopifyLocations.length > 0) {
+    locationsInfo += `\n--- UBICACIONES DE LA EMPRESA ---\n`;
+    shopifyLocations.forEach(loc => {
+      locationsInfo += `  - ${loc.city || 'N/A'}, ${loc.province || 'N/A'}, ${loc.country || 'N/A'} (CP: ${loc.zip || 'N/A'})\n`;
+    });
+  }
+
   const baseInstruction = 'Analiza el siguiente correo electrónico de un cliente y elige la plantilla de respuesta más adecuada de la lista proporcionada.';
-  const specialRule = "REGLA IMPORTANTE: Presta especial atención a la lista de 'Productos'. Si el cliente reporta un problema con un producto (ej. faltante o dañado) y en el pedido solo hay un tipo de artículo, DEBES elegir una plantilla que resuelva el problema de forma proactiva (ej. que confirme un reemplazo) en lugar de una que pida más información.";
+  const specialRuleSingleItem = "REGLA IMPORTANTE: Presta especial atención a la lista de 'Productos'. Si el cliente reporta un problema con un producto (ej. faltante o dañado) y en el pedido solo hay un tipo de artículo, DEBES elegir una plantilla que resuelva el problema de forma proactiva (ej. que confirme un reemplazo) en lugar de una que pida más información.";
+  const specialRuleWarehouseReturn = "REGLA ADICIONAL: Si el 'ÚLTIMO EVENTO DE SEGUIMIENTO' indica un estado 'delivered' y la 'Ubicación' de ese evento coincide con CUALQUIERA de las 'UBICACIONES DE LA EMPRESA', DEBES elegir una plantilla que refleje una devolución al almacén o un problema de entrega a dirección incorrecta.";
   const outputFormatInstruction = 'Responde únicamente con el ID de la plantilla seleccionada (por ejemplo, "Pedido perdido::Respuesta_A").';
 
-  return `${baseInstruction}\n${specialRule}\n${outputFormatInstruction}\n\n---\nCORREO DEL CLIENTE ---\n${messageDetails.body}${imageInfo}${customerInfo}${orderInfo}\n\n---\nPLANTILLAS DISPONIBLES ---\n${optionsText}`;
+  return `${baseInstruction}\n${specialRuleSingleItem}\n${specialRuleWarehouseReturn}\n${outputFormatInstruction}\n\n---\nCORREO DEL CLIENTE ---\n${messageDetails.body}${imageInfo}${customerInfo}${orderInfo}${locationsInfo}\n\n---\nPLANTILLAS DISPONIBLES ---\n${optionsText}`;
 }
 
 /**

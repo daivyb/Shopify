@@ -1,27 +1,63 @@
-## Flujo de Trabajo Inteligente
+# Gestor de Plantillas de Mensajes con Gemini para Shopify
 
-El script sigue un proceso automatizado y optimizado:
+## Descripción General
 
-1.  **Búsqueda Selectiva**: Encuentra correos con la etiqueta `GeminiLabeled` que hayan sido recibidos **a partir del día actual**, ignorando correos antiguos. Además, excluye los que ya tienen la etiqueta `GeminiMessage` para no procesarlos dos veces.
-2.  **Clasificación**: Utiliza el archivo `classifier.js` para identificar la categoría del correo, el cual contiene una lista de etiquetas predefinidas (ej. `Complaint/Shipping Issue`).
-    *   **Si se encuentra una etiqueta coincidente**: El script usa esa categoría para continuar el flujo.
-    *   **Si no se encuentra ninguna etiqueta coincidente**: El script ignora el correo y no realiza ninguna acción.
-3.  **Extracción de Contenido**: **Toma** el hilo de correo y lee únicamente el **primer mensaje**, truncándolo a **1024 caracteres**.
-4.  **Consulta a Notion**: **Toma** la categoría identificada del correo y consulta la base de datos de Notion para obtener **todas** las plantillas de respuesta disponibles para esa categoría.
-5.  **Enriquecimiento de Datos**: Busca al cliente en Shopify usando su email. Si se encuentra, obtiene los detalles de su **último pedido**, incluyendo el estado de preparación (`fulfillment_status`) y, más importante, los datos de envío del paquete (`fulfillment`).
-6.  **Selección con IA (Contexto Mejorado)**: Se construye un prompt para Gemini que incluye:
+Este proyecto de Google Apps Script automatiza la generación de borradores de respuestas personalizadas en Gmail, utilizando la inteligencia artificial de Google Gemini y plantillas gestionadas en Notion. Está diseñado para optimizar el proceso de atención al cliente de Shopify, permitiendo al equipo responder de manera más rápida y consistente a diversas consultas y problemas de los clientes.
+
+El script analiza los correos electrónicos entrantes, clasifica su intención, enriquece el contexto con datos relevantes de Shopify (clientes, pedidos, estados de envío) y utiliza Gemini para seleccionar la plantilla de respuesta más adecuada. Finalmente, personaliza la plantilla y crea un borrador de correo electrónico listo para ser enviado.
+
+## Características
+
+-   **Generación Inteligente de Borradores:** Utiliza la IA de Gemini para seleccionar la plantilla de respuesta más apropiada basada en el contenido del correo del cliente y el contexto del pedido de Shopify.
+-   **Personalización Dinámica:** Rellena automáticamente las plantillas con datos específicos del cliente y del pedido (nombre, número de pedido, artículos, estado de envío, etc.).
+-   **Gestión de Plantillas en Notion:** Permite al equipo de soporte mantener y actualizar fácilmente las plantillas de respuesta en una base de datos de Notion.
+-   **Contexto Enriquecido de Shopify:** Integra información detallada de clientes y pedidos de Shopify para decisiones más informadas y respuestas más precisas.
+-   **Manejo de Escenarios Complejos:** Capacidad para diferenciar entre problemas de entrega (ej. paquete demorado vs. entregado pero no recibido) y adaptar la respuesta.
+-   **Flujo de Trabajo Automatizado:** Desde la clasificación del correo hasta la creación del borrador, el proceso está diseñado para minimizar la intervención manual.
+
+## ¿Cómo funciona?
+
+El script opera a través de la función principal `createDraftReplies`, que orquesta el siguiente flujo de trabajo:
+
+1.  **Configuración Inicial**: Al inicio, el script obtiene todas las etiquetas de clasificación configuradas en Notion y todas las ubicaciones de Shopify (almacenes, tiendas).
+2.  **Búsqueda de Correos**: Identifica hilos de correo en Gmail que tienen la etiqueta `GeminiLabeled` y que aún no han sido procesados (`-label:GeminiMessage`).
+3.  **Clasificación del Correo**: Utiliza un clasificador interno para determinar la categoría principal del correo (ej. `Complaint/Shipping Issue`). Si no se clasifica, el hilo se ignora.
+4.  **Filtrado por Configuración**: Solo procesa hilos cuya etiqueta de clasificación esté configurada en Notion.
+5.  **Obtención de Datos de Shopify**:
+    *   Busca los detalles del cliente en Shopify usando el email del remitente.
+    *   Si encuentra al cliente, obtiene los detalles de su último pedido, incluyendo información de envío y, crucialmente, los detalles del **último evento de seguimiento** del transportista.
+6.  **Construcción del Prompt para Gemini**: Se genera un prompt detallado para Gemini que incluye:
     *   El cuerpo del correo del cliente.
-    *   Las plantillas candidatas de Notion.
-    *   **Información crucial del pedido de Shopify**:
-        *   **Estado Detallado del Envío**: El estado real del paquete (`shipment_status`, ej: `in_transit`, `delivered`, `failure`).
-        *   **Transportista**: El nombre de la empresa de paquetería.
-        *   **Número de Seguimiento**.
-        *   **Días de Retraso**: Diferencia en días entre la entrega real y la estimada.
-        *   **Días Transcurridos desde la Entrega**: Días que han pasado desde que el paquete se marcó como entregado.
-    *   Esta información detallada es **esencial** para que Gemini pueda distinguir entre escenarios complejos (ej. un paquete demorado vs. uno marcado como entregado pero no recibido) y elija la plantilla más adecuada.
-7.  **Personalización**: Una vez que Gemini selecciona la mejor plantilla, el script reemplaza los placeholders (ej. `{{customer_name}}`, `{{tracking_number}}`) usando los datos de Shopify obtenidos previamente.
-8.  **Creación de Borrador**: Genera un borrador de respuesta en el hilo de correo original con el mensaje ya personalizado.
-9.  **Etiquetado Final**: Aplica la etiqueta `GeminiMessage` para marcar el hilo como procesado.
+    *   Todas las plantillas de respuesta disponibles para la categoría clasificada.
+    *   Información completa del cliente y del último pedido de Shopify.
+    *   Detalles del **último evento de seguimiento** del transportista (estado, mensaje, ubicación).
+    *   Una lista de **todas las ubicaciones de Shopify** de la empresa.
+    *   Reglas explícitas para la selección de plantillas, como priorizar respuestas proactivas para pedidos de un solo artículo o identificar devoluciones a almacenes.
+7.  **Selección de Plantilla por Gemini**: Gemini analiza el prompt y devuelve el ID de la plantilla más adecuada.
+8.  **Personalización y Creación de Borrador**: La plantilla seleccionada se personaliza con los datos del cliente y del pedido, y se crea un borrador de respuesta en el hilo de correo de Gmail.
+9.  **Etiquetado Final**: El hilo de correo se marca con la etiqueta `GeminiMessage` para indicar que ha sido procesado.
+
+## Configuración
+
+1.  **Clonar el Repositorio**: Clona este repositorio en tu máquina local.
+2.  **Google Apps Script**: Sube los archivos a un nuevo proyecto de Google Apps Script utilizando `clasp`.
+3.  **Claves de API y URLs**:
+    *   En el editor de Google Apps Script, ve a **Configuración del proyecto > Propiedades del secuencia de comandos**.
+    *   Agrega las siguientes propiedades:
+        *   `GEMINI_API_KEY`: Tu clave de API de Google AI Studio para Gemini.
+        *   `NOTION_API_KEY`: Tu clave de integración de Notion.
+        *   `MASTER_DATABASE_ID`: El ID de tu base de datos maestra de Notion que contiene las configuraciones de plantillas.
+        *   `SHOPIFY_API_ACCESS_TOKEN`: Tu token de acceso a la API de Shopify Admin con los scopes necesarios (ej. `read_orders`, `read_customers`, `read_locations`).
+        *   `SHOPIFY_SHOP_URL`: La URL de tu tienda Shopify (ej. `tu-tienda.myshopify.com`).
+4.  **Permisos**: Ejecuta la función `createDraftReplies` manualmente desde el editor una vez para autorizar los permisos necesarios para Gmail, Google Docs (si aplica), y servicios externos (Shopify, Notion, Gemini).
+5.  **Activación de Servicios Avanzados**: Asegúrate de que el servicio avanzado de Gmail esté activado en tu proyecto de Apps Script (Servicios > Servicio avanzado de Gmail API).
+
+## Uso
+
+Para ejecutar el generador de borradores, puedes:
+
+-   **Manualmente**: Abrir el proyecto en el editor de Google Apps Script y ejecutar la función `createDraftReplies`.
+-   **Automáticamente**: Configurar un disparador basado en tiempo (por ejemplo, cada 15 minutos) para que la función `createDraftReplies` se ejecute periódicamente.
 
 ## Marcadores de Posición (Placeholders)
 
@@ -59,6 +95,28 @@ A continuación se detallan los campos específicos extraídos de la API de Shop
 | `first_name`            | `Customer`            | Nombre del cliente.                                               |
 | `last_name`             | `Customer`            | Apellido del cliente.                                             |
 | `email`                 | `Customer`            | Correo del cliente.                                               |
+| `tracking_number`       | `Fulfillment`         | Número de seguimiento del envío.                                  |
+| `tracking_url`          | `Fulfillment`         | URL de seguimiento del envío.                                     |
+| `tracking_company`      | `Fulfillment`         | Nombre de la empresa de transporte.                               |
+| `shipment_status`       | `Fulfillment`         | Estado detallado del envío (`in_transit`, `delivered`, etc.).     |
+| `delivered_at`          | `Fulfillment`         | Fecha de entrega. (Campo calculado por el script a partir de los eventos de seguimiento). |
+| `estimated_delivery_at` | `Fulfillment Event`   | Fecha estimada de entrega (obtenida de los eventos del envío).    |
+| `status`                | `Fulfillment Event`   | Estado del envío en un evento específico (ej. `delivered`).       |
+| `message`               | `Fulfillment Event`   | Mensaje descriptivo del evento del transportista.                 |
+| `happened_at`           | `Fulfillment Event`   | Fecha y hora en que ocurrió el evento de seguimiento.             |
+| `city`                  | `Fulfillment Event`   | Ciudad donde ocurrió el evento de seguimiento.                    |
+| `province`              | `Fulfillment Event`   | Provincia/Estado donde ocurrió el evento de seguimiento.          |
+| `country`               | `Fulfillment Event`   | País donde ocurrió el evento de seguimiento.                      |
+| `zip`                   | `Fulfillment Event`   | Código Postal donde ocurrió el evento de seguimiento.             |
+| `max_delivery_date_time`| `FulfillmentOrder`    | Fecha máxima de entrega (obtenida desde `delivery_method`).       |
+| `name`                  | `Line Item`           | Nombre del producto.                                              |
+| `quantity`              | `Line Item`           | Cantidad del producto.                                            |
+| `sku`                   | `Line Item`           | SKU (Stock Keeping Unit) del producto.                            |
+| `fulfillable_quantity`  | `Line Item`           | Cantidad de un artículo que aún no se ha enviado.                 |
+| `city`                  | `Location`            | Ciudad de una ubicación de la empresa.                            |
+| `province`              | `Location`            | Provincia/Estado de una ubicación de la empresa.                  |
+| `country`               | `Location`            | País de una ubicación de la empresa.                              |
+| `zip`                   | `Location`            | Código Postal de una ubicación de la empresa.                     |
 | `id`                    | `Order`               | ID único del pedido.                                              |
 | `order_number`          | `Order`               | Número de pedido visible para el cliente.                         |
 | `created_at`            | `Order`               | Fecha de creación del pedido.                                     |
@@ -68,14 +126,3 @@ A continuación se detallan los campos específicos extraídos de la API de Shop
 | `line_items`            | `Order`               | Lista de productos (artículos de línea) en el pedido.             |
 | `fulfillments`          | `Order`               | Lista de envíos asociados al pedido.                              |
 | `fulfillment_orders`    | `Order`               | Lista de pedidos de preparación.                                  |
-| `tracking_number`       | `Fulfillment`         | Número de seguimiento del envío.                                  |
-| `tracking_url`          | `Fulfillment`         | URL de seguimiento del envío.                                     |
-| `tracking_company`      | `Fulfillment`         | Nombre de la empresa de transporte.                               |
-| `shipment_status`       | `Fulfillment`         | Estado detallado del envío (`in_transit`, `delivered`, etc.).     |
-| `delivered_at`          | `Fulfillment`         | Fecha en que se entregó el envío.                                 |
-| `estimated_delivery_at` | `Fulfillment Event`   | Fecha estimada de entrega (obtenida de los eventos del envío).    |
-| `max_delivery_date_time`| `FulfillmentOrder`    | Fecha máxima de entrega (obtenida desde `delivery_method`).       |
-| `name`                  | `Line Item`           | Nombre del producto.                                              |
-| `quantity`              | `Line Item`           | Cantidad del producto.                                            |
-| `sku`                   | `Line Item`           | SKU (Stock Keeping Unit) del producto.                            |
-| `fulfillable_quantity`  | `Line Item`           | Cantidad de un artículo que aún no se ha enviado.                 |

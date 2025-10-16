@@ -81,22 +81,40 @@ function getCustomerLatestOrderDetails(customerId) {
             if (latestOrder.fulfillments && latestOrder.fulfillments.length > 0) {
               const fulfillment = latestOrder.fulfillments[0];
       
-              // Buscar la fecha de entrega estimada en los eventos del fulfillment
               const events = getFulfillmentEvents(latestOrder.id, fulfillment.id);
-              if (events) {
+              if (events && events.length > 0) {
+                // Obtener el último evento de tracking
+                const lastEvent = events[events.length - 1];
+                Logger.log(`Último evento de fulfillment encontrado: ${JSON.stringify(lastEvent)}`);
+
+                // Adjuntar los detalles del último evento al objeto fulfillment
+                fulfillment.last_tracking_event = {
+                  status: lastEvent.status,
+                  message: lastEvent.message,
+                  happened_at: lastEvent.happened_at,
+                  city: lastEvent.city,
+                  province: lastEvent.province,
+                  country: lastEvent.country,
+                  zip: lastEvent.zip // Incluir zip si está disponible
+                };
+
+                // Inyectar la fecha estimada en el objeto fulfillment para que personalizer.js la use
                 const eventWithEstimate = events.find(event => event.estimated_delivery_at);
                 if (eventWithEstimate) {
-                  // Inyectar la fecha estimada en el objeto fulfillment para que personalizer.js la use
                   fulfillment.estimated_delivery_at = eventWithEstimate.estimated_delivery_at;
                   Logger.log(`Fecha de entrega estimada encontrada en eventos: ${fulfillment.estimated_delivery_at}`);
                 }
-              }
-      
-              // Buscar la fecha de entrega final (cuando ya se entregó)
-              const deliveryDate = getDeliveryDateFromFulfillmentEvents(latestOrder.id, fulfillment.id);
-              if (deliveryDate) {
+                
                 // Inyectamos la fecha de entrega en el objeto para que personalizer.js la pueda usar.
-                fulfillment.delivered_at = deliveryDate;
+                // Esto ya lo hace getDeliveryDateFromFulfillmentEvents, pero podemos usar el lastEvent si su status es delivered
+                if (lastEvent.status === 'delivered' && lastEvent.happened_at) {
+                    fulfillment.delivered_at = lastEvent.happened_at;
+                } else {
+                    const deliveredEvent = events.find(event => event.status === 'delivered');
+                    if (deliveredEvent) {
+                        fulfillment.delivered_at = deliveredEvent.happened_at;
+                    }
+                }
               }
             }
             
@@ -226,6 +244,48 @@ function getDeliveryDateFromFulfillmentEvents(orderId, fulfillmentId) {
     return null;
   } catch (e) {
     Logger.log(`Error al obtener los eventos de fulfillment: ${e.toString()}`);
+    return null;
+  }
+}
+
+/**
+ * Obtiene todas las ubicaciones (warehouses/tiendas) configuradas en Shopify.
+ * @returns {Array|null} Un array de objetos de ubicación o null.
+ */
+function getAllShopifyLocations() {
+  if (!SHOPIFY_API_ACCESS_TOKEN || !SHOPIFY_SHOP_URL) {
+    Logger.log('Error: Credenciales de API no configuradas.');
+    return null;
+  }
+
+  const apiUrl = `https://${SHOPIFY_SHOP_URL}/admin/api/2023-10/locations.json`;
+  const options = {
+    'method': 'get',
+    'contentType': 'application/json',
+    'headers': {
+      'X-Shopify-Access-Token': SHOPIFY_API_ACCESS_TOKEN,
+    }
+  };
+
+  try {
+    const response = UrlFetchApp.fetch(apiUrl, options);
+    const jsonResponse = JSON.parse(response.getContentText());
+    
+    if (jsonResponse.locations && jsonResponse.locations.length > 0) {
+      Logger.log(`Se encontraron ${jsonResponse.locations.length} ubicaciones de Shopify.`);
+      // Extraer solo los campos relevantes para el prompt
+      return jsonResponse.locations.map(location => ({
+        city: location.city,
+        province: location.province,
+        country: location.country,
+        zip: location.zip
+      }));
+    } else {
+      Logger.log('No se encontraron ubicaciones de Shopify.');
+      return null;
+    }
+  } catch (e) {
+    Logger.log(`Error al obtener ubicaciones de Shopify: ${e.toString()}`);
     return null;
   }
 }
