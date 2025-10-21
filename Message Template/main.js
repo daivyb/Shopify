@@ -74,38 +74,32 @@ function createDraftReplies() {
     if (customer && customer.id) {
       latestOrder = getCustomerLatestOrderDetails(customer.id);
     }
-
+    
     if (latestOrder) {
-        Logger.log(`  > Cliente: ${customer.first_name || ''} ${customer.last_name || ''} (ID: ${customer.id})`);
-        Logger.log(`  > Pedido: #${latestOrder.order_number}`);
-
-        if (latestOrder.fulfillments && latestOrder.fulfillments.length > 0) {
-            const fulfillment = latestOrder.fulfillments[0];
-            const delayDays = calculateDeliveryDelay(latestOrder);
-            const sinceDeliveryDays = calculateDaysSinceDelivery(latestOrder);
-
-            Logger.log(`  > Info Envío:`);
-            if (fulfillment.estimated_delivery_at) {
-              Logger.log(`    - Fecha de entrega estimada: ${fulfillment.estimated_delivery_at}`);
-            }
-            if (fulfillment.delivered_at) {
-              Logger.log(`    - Fecha de entrega real: ${fulfillment.delivered_at}`);
-            }
-            if (delayDays !== null) {
-                Logger.log(`    - Retraso (días): ${delayDays}`);
-            }
-            if (sinceDeliveryDays !== null) {
-                Logger.log(`    - Días Transcurridos: ${sinceDeliveryDays}`);
-            }
-        }
+        // This block is intentionally empty as logging is now handled by structured prompt info
     } else if (customer) {
         Logger.log(`  > Cliente: ${customer.first_name || ''} ${customer.last_name || ''} (Sin pedidos recientes)`);
     } else {
         Logger.log(`  > Cliente: No encontrado en Shopify.`);
     }
     
-    const prompt = buildPromptForBestResponse(messageDetails, allTemplates, customer, latestOrder, shopifyLocations);
-    const geminiChoice = getGeminiResponse(prompt);
+    const { fullPrompt, customerInfo, orderInfo, imageInfo, locationsInfo } = buildPromptForBestResponse(messageDetails, allTemplates, customer, latestOrder, shopifyLocations);
+
+    // Log the individual components for clarity
+    if (customerInfo) {
+        Logger.log(customerInfo);
+    }
+    if (orderInfo) {
+        Logger.log(orderInfo);
+    }
+    if (imageInfo) {
+        Logger.log(imageInfo);
+    }
+    if (locationsInfo) {
+        Logger.log(locationsInfo);
+    }
+
+    const geminiChoice = getGeminiResponse(fullPrompt);
 
     if (!geminiChoice) {
       Logger.log('  > Error: No se pudo obtener una respuesta válida de Gemini.');
@@ -146,7 +140,7 @@ function createDraftReplies() {
  * @param {Object} allTemplates Todas las plantillas disponibles para la categoría.
  * @param {Object|null} customer Detalles del cliente de Shopify.
  * @param {Object|null} latestOrder Detalles del último pedido del cliente de Shopify.
- * @returns {string} El prompt completo.
+ * @returns {Object} Un objeto con el prompt completo y sus componentes individuales.
  */
 function buildPromptForBestResponse(messageDetails, allTemplates, customer, latestOrder, shopifyLocations) {
   let optionsText = '\n';
@@ -176,6 +170,7 @@ function buildPromptForBestResponse(messageDetails, allTemplates, customer, late
     // Lógica mejorada para el estado de la entrega
     if (latestOrder.fulfillments && latestOrder.fulfillments.length > 0) {
       const firstFulfillment = latestOrder.fulfillments[0];
+      orderInfo += `Estado del Fulfillment: ${firstFulfillment.status || 'N/A'}\n`;
       orderInfo += `Estado Detallado del Envío: ${firstFulfillment.shipment_status || 'Pendiente'}\n`;
       orderInfo += `Transportista: ${firstFulfillment.tracking_company || 'N/A'}\n`;
       orderInfo += `Número de Seguimiento: ${firstFulfillment.tracking_number || 'N/A'}\n`;
@@ -230,8 +225,17 @@ function buildPromptForBestResponse(messageDetails, allTemplates, customer, late
   const specialRuleWarehouseReturn = "REGLA ADICIONAL: Si el 'ÚLTIMO EVENTO DE SEGUIMIENTO' indica un estado 'delivered' y la 'Ubicación' de ese evento coincide con CUALQUIERA de las 'UBICACIONES DE LA EMPRESA', DEBES elegir una plantilla que refleje una devolución al almacén o un problema de entrega a dirección incorrecta.";
   const outputFormatInstruction = 'Responde únicamente con el ID de la plantilla seleccionada (por ejemplo, "Pedido perdido::Respuesta_A").';
 
-  return `${baseInstruction}\n${specialRuleSingleItem}\n${specialRuleWarehouseReturn}\n${outputFormatInstruction}\n\n---\nCORREO DEL CLIENTE ---\n${messageDetails.body}${imageInfo}${customerInfo}${orderInfo}${locationsInfo}\n\n---\nPLANTILLAS DISPONIBLES ---\n${optionsText}`;
+  const fullPrompt = `${baseInstruction}\n${specialRuleSingleItem}\n${specialRuleWarehouseReturn}\n${outputFormatInstruction}\n\n---\nCORREO DEL CLIENTE ---\n${messageDetails.body}${imageInfo}${customerInfo}${orderInfo}${locationsInfo}\n\n---\nPLANTILLAS DISPONIBLES ---\n${optionsText}`;
+
+  return { fullPrompt, customerInfo, orderInfo, imageInfo, locationsInfo };
 }
+
+/**
+ * Busca la plantilla correspondiente a la elección de Gemini.
+ * @param {string} geminiChoice El ID de la plantilla devuelto por Gemini (ej. "Contexto::Respuesta_A").
+ * @param {Object} allTemplates El objeto completo de plantillas.
+ * @returns {string|null} El texto de la plantilla seleccionada.
+ */
 
 /**
  * Busca la plantilla correspondiente a la elección de Gemini.
