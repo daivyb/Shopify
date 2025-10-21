@@ -165,16 +165,28 @@ function buildPromptForBestResponse(messageDetails, allTemplates, customer, late
     orderInfo += `Número de Pedido: ${latestOrder.order_number || 'N/A'}\n`;
     orderInfo += `Fecha del Pedido: ${latestOrder.created_at ? new Date(latestOrder.created_at).toLocaleDateString() : 'N/A'}\n`;
     orderInfo += `Estado Financiero: ${latestOrder.financial_status || 'N/A'}\n`;
-    orderInfo += `Estado de Preparación (Fulfillment): ${latestOrder.fulfillment_status || 'N/A'}\n`;
 
     // Lógica mejorada para el estado de la entrega
     if (latestOrder.fulfillments && latestOrder.fulfillments.length > 0) {
-      const firstFulfillment = latestOrder.fulfillments[0];
-      orderInfo += `Estado del Fulfillment: ${firstFulfillment.status || 'N/A'}\n`;
-      orderInfo += `Estado Detallado del Envío: ${firstFulfillment.shipment_status || 'Pendiente'}\n`;
-      orderInfo += `Transportista: ${firstFulfillment.tracking_company || 'N/A'}\n`;
-      orderInfo += `Número de Seguimiento: ${firstFulfillment.tracking_number || 'N/A'}\n`;
-      orderInfo += `URL de Seguimiento: ${firstFulfillment.tracking_url || 'N/A'}\n`;
+      orderInfo += `\n--- DETALLES DE LAS PREPARACIONES ---\n`;
+      latestOrder.fulfillments.forEach((fulfillment, index) => {
+        orderInfo += `  --- Preparación #${index + 1} ---\n`;
+        orderInfo += `  Estado del Fulfillment: ${fulfillment.status || 'N/A'}\n`;
+        orderInfo += `  Estado Detallado del Envío: ${fulfillment.shipment_status || 'Pendiente'}\n`;
+        orderInfo += `  Transportista: ${fulfillment.tracking_company || 'N/A'}\n`;
+        orderInfo += `  Número de Seguimiento: ${fulfillment.tracking_number || 'N/A'}\n`;
+        orderInfo += `  URL de Seguimiento: ${fulfillment.tracking_url || 'N/A'}\n`;
+
+        // Add last tracking event details for each fulfillment
+        if (fulfillment.last_tracking_event) {
+          const lastEvent = fulfillment.last_tracking_event;
+          orderInfo += `  --- Último Evento de Seguimiento (Preparación #${index + 1}) ---\n`;
+          orderInfo += `  Estado: ${lastEvent.status || 'N/A'}\n`;
+          orderInfo += `  Mensaje: ${lastEvent.message || 'N/A'}\n`;
+          orderInfo += `Fecha/Hora: ${lastEvent.happened_at || 'N/A'}\n`;
+          orderInfo += `Ubicación: ${lastEvent.city || 'N/A'}, ${lastEvent.province || 'N/A'}, ${lastEvent.country || 'N/A'} (CP: ${lastEvent.zip || 'N/A'})\n`;
+        }
+      });
     }
 
     // Calcular y añadir datos de tiempo para dar más contexto a la IA
@@ -194,16 +206,6 @@ function buildPromptForBestResponse(messageDetails, allTemplates, customer, late
       latestOrder.line_items.forEach(item => {
         orderInfo += `  - ${item.quantity} x ${item.name} (SKU: ${item.sku || 'N/A'})\n`;
       });
-    }
-
-    // Add last tracking event details
-    if (latestOrder.fulfillments && latestOrder.fulfillments.length > 0 && latestOrder.fulfillments[0].last_tracking_event) {
-      const lastEvent = latestOrder.fulfillments[0].last_tracking_event;
-      orderInfo += `\n--- ÚLTIMO EVENTO DE SEGUIMIENTO ---\n`;
-      orderInfo += `Estado: ${lastEvent.status || 'N/A'}\n`;
-      orderInfo += `Mensaje: ${lastEvent.message || 'N/A'}\n`;
-      orderInfo += `Fecha/Hora: ${lastEvent.happened_at || 'N/A'}\n`;
-      orderInfo += `Ubicación: ${lastEvent.city || 'N/A'}, ${lastEvent.province || 'N/A'}, ${lastEvent.country || 'N/A'} (CP: ${lastEvent.zip || 'N/A'})\n`;
     }
   }
 

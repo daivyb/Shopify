@@ -152,8 +152,12 @@ function calculateDeliveryDelay(order) {
     const deliveredDate = new Date(fulfillment.delivered_at);
     const estimatedDate = new Date(fulfillment.estimated_delivery_at);
     
+    Logger.log(`[DEBUG] calculateDeliveryDelay - Delivered Date: ${deliveredDate.toISOString()}`);
+    Logger.log(`[DEBUG] calculateDeliveryDelay - Estimated Date: ${estimatedDate.toISOString()}`);
+
     // Calculate the difference in time
     const diffTime = deliveredDate.getTime() - estimatedDate.getTime();
+    Logger.log(`[DEBUG] calculateDeliveryDelay - Diff Time (ms): ${diffTime}`);
 
     // If the difference is negative or zero, the package was not delayed.
     if (diffTime <= 0) {
@@ -162,6 +166,7 @@ function calculateDeliveryDelay(order) {
 
     // Convert the positive difference in milliseconds to days
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    Logger.log(`[DEBUG] calculateDeliveryDelay - Diff Days: ${diffDays}`);
     return diffDays;
   }
   return null;
