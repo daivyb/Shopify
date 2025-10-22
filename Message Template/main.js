@@ -165,6 +165,7 @@ function buildPromptForBestResponse(messageDetails, allTemplates, customer, late
     orderInfo += `Número de Pedido: ${latestOrder.order_number || 'N/A'}\n`;
     orderInfo += `Fecha del Pedido: ${latestOrder.created_at ? new Date(latestOrder.created_at).toLocaleDateString() : 'N/A'}\n`;
     orderInfo += `Estado Financiero: ${latestOrder.financial_status || 'N/A'}\n`;
+    orderInfo += `Estado de Fulfillment: ${latestOrder.fulfillment_status || 'N/A'}\n`;
 
     // Lógica mejorada para el estado de la entrega
     if (latestOrder.fulfillments && latestOrder.fulfillments.length > 0) {
@@ -185,20 +186,30 @@ function buildPromptForBestResponse(messageDetails, allTemplates, customer, late
           orderInfo += `  Mensaje: ${lastEvent.message || 'N/A'}\n`;
           orderInfo += `Fecha/Hora: ${lastEvent.happened_at || 'N/A'}\n`;
           orderInfo += `Ubicación: ${lastEvent.city || 'N/A'}, ${lastEvent.province || 'N/A'}, ${lastEvent.country || 'N/A'} (CP: ${lastEvent.zip || 'N/A'})\n`;
+
+          // Añadir Delivered Date y Estimated Date en formato Shopify
+          if (fulfillment.delivered_at) {
+            orderInfo += `  Fecha de Entrega (Shopify): ${fulfillment.delivered_at}\n`;
+          }
+          if (fulfillment.estimated_delivery_at) {
+            orderInfo += `  Fecha Estimada (Shopify): ${fulfillment.estimated_delivery_at}\n`;
+          }
+        }
+
+        // Calcular y añadir datos de tiempo para dar más contexto a la IA (por fulfillment)
+        const deliveryDelayDays = calculateDeliveryDelay(latestOrder, fulfillment);
+        if (deliveryDelayDays !== null) {
+          orderInfo += `  Días de Retraso en la Entrega (vs. estimado): ${deliveryDelayDays}\n`;
+        }
+
+        const daysSinceDelivery = calculateDaysSinceDelivery(latestOrder, fulfillment);
+        if (daysSinceDelivery !== null) {
+          orderInfo += `  Días Transcurridos Desde la Entrega: ${daysSinceDelivery}\n`;
         }
       });
     }
 
-    // Calcular y añadir datos de tiempo para dar más contexto a la IA
-    const deliveryDelayDays = calculateDeliveryDelay(latestOrder);
-    if (deliveryDelayDays !== null) {
-      orderInfo += `Días de Retraso en la Entrega (vs. estimado): ${deliveryDelayDays}\n`;
-    }
 
-    const daysSinceDelivery = calculateDaysSinceDelivery(latestOrder);
-    if (daysSinceDelivery !== null) {
-      orderInfo += `Días Transcurridos Desde la Entrega: ${daysSinceDelivery}\n`;
-    }
 
     // Añadir detalles de los productos en el pedido si es necesario
     if (latestOrder.line_items && latestOrder.line_items.length > 0) {

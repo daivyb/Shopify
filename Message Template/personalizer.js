@@ -19,7 +19,7 @@ function personalizeTemplate(template, emailBody, customer, latestOrder) {
     'customer_full_name': customer ? `${customer.first_name || ''} ${customer.last_name || ''}`.trim() : extractCustomerName(emailBody),
     'customer_email': customer ? customer.email : null,
     'order_id': latestOrder ? latestOrder.order_number : extractOrderId(emailBody),
-    'order_date': latestOrder && latestOrder.created_at ? new Date(latestOrder.created_at).toLocaleDateString() : null,
+    'order_date': latestOrder && latestOrder.created_at ? new Date(latestOrder.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : null,
     'tracking_number': getTrackingInfo(latestOrder),
     'order_items': latestOrder ? formatOrderItems(latestOrder.line_items) : null,
     // New placeholders for Shipping Issue
@@ -27,10 +27,10 @@ function personalizeTemplate(template, emailBody, customer, latestOrder) {
     'carrier_name': latestOrder && latestOrder.fulfillments && latestOrder.fulfillments.length > 0 && latestOrder.fulfillments[0].tracking_company ? latestOrder.fulfillments[0].tracking_company : null,
     'expected_delivery_date': getCarrierDeliveryDate(latestOrder),
     'delivery_location': latestOrder && latestOrder.shipping_address && latestOrder.shipping_address.address1 ? latestOrder.shipping_address.address1 : null,
-    'delivery_date': latestOrder && latestOrder.fulfillments && latestOrder.fulfillments.length > 0 && latestOrder.fulfillments[0].delivered_at ? new Date(latestOrder.fulfillments[0].delivered_at).toLocaleDateString() : null,
+    'delivery_date': latestOrder && latestOrder.fulfillments && latestOrder.fulfillments.length > 0 && latestOrder.fulfillments[0].delivered_at ? new Date(latestOrder.fulfillments[0].delivered_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : null,
     'shipping_address': latestOrder && latestOrder.shipping_address ? formatAddress(latestOrder.shipping_address) : null,
-    'delivery_delay_days': calculateDeliveryDelay(latestOrder),
-    'days_since_delivery': calculateDaysSinceDelivery(latestOrder), // New placeholder
+    'delivery_delay_days': calculateDeliveryDelay(latestOrder, latestOrder.fulfillments && latestOrder.fulfillments.length > 0 ? latestOrder.fulfillments[0] : null),
+    'days_since_delivery': calculateDaysSinceDelivery(latestOrder, latestOrder.fulfillments && latestOrder.fulfillments.length > 0 ? latestOrder.fulfillments[0] : null), // New placeholder
     'product_details': latestOrder ? formatProductDetails(latestOrder.line_items) : null, // Requires a new helper function
     'unfulfilled_items': latestOrder ? formatUnfulfilledItems(latestOrder.line_items) : null,
     'product_quantity': latestOrder && latestOrder.line_items && latestOrder.line_items.length > 0 ? latestOrder.line_items.map(item => item.quantity).join(', ') : null,
@@ -78,14 +78,12 @@ function getTrackingInfo(order) {
 function getCarrierDeliveryDate(order) {
   // Usa el 'estimated_delivery_at' inyectado desde los eventos del fulfillment.
   if (order && order.fulfillments && order.fulfillments.length > 0 && order.fulfillments[0].estimated_delivery_at) {
-    const dateOptions = { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric',
-      timeZone: 'UTC' // Clave para evitar el error de día
-    };
-    return new Date(order.fulfillments[0].estimated_delivery_at).toLocaleDateString('en-US', dateOptions);
+        const dateOptions = {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          timeZone: 'UTC' // Clave para evitar el error de día
+        };    return new Date(order.fulfillments[0].estimated_delivery_at).toLocaleDateString('en-US', dateOptions);
   }
 
   // Fallback si no se encuentra ninguna fecha.
@@ -145,31 +143,27 @@ function formatAddress(address) {
 }
 
 // New helper function for calculating delivery delay
-function calculateDeliveryDelay(order) {
-  if (!order || !order.fulfillments || order.fulfillments.length === 0) return null;
-  const fulfillment = order.fulfillments[0];
-  if (fulfillment.shipment_status === 'delivered' && fulfillment.delivered_at && fulfillment.estimated_delivery_at) {
-    const deliveredDate = new Date(fulfillment.delivered_at);
-    const estimatedDate = new Date(fulfillment.estimated_delivery_at);
-    
-    Logger.log(`[DEBUG] calculateDeliveryDelay - Delivered Date: ${deliveredDate.toISOString()}`);
-    Logger.log(`[DEBUG] calculateDeliveryDelay - Estimated Date: ${estimatedDate.toISOString()}`);
+function calculateDeliveryDelay(order, fulfillment) { // Added fulfillment parameter
+  if (!fulfillment || fulfillment.shipment_status !== 'delivered' || !fulfillment.delivered_at || !fulfillment.estimated_delivery_at) return null;
+  
+  const deliveredDate = new Date(fulfillment.delivered_at);
+  const estimatedDate = new Date(fulfillment.estimated_delivery_at);
+  
+      Logger.log(`[DEBUG] calculateDeliveryDelay - Delivered Date: ${fulfillment.delivered_at}`);
+      Logger.log(`[DEBUG] calculateDeliveryDelay - Estimated Date: ${fulfillment.estimated_delivery_at}`);
+  // Calculate the difference in time
+  const diffTime = deliveredDate.getTime() - estimatedDate.getTime();
+  Logger.log(`[DEBUG] calculateDeliveryDelay - Diff Time (ms): ${diffTime}`);
 
-    // Calculate the difference in time
-    const diffTime = deliveredDate.getTime() - estimatedDate.getTime();
-    Logger.log(`[DEBUG] calculateDeliveryDelay - Diff Time (ms): ${diffTime}`);
-
-    // If the difference is negative or zero, the package was not delayed.
-    if (diffTime <= 0) {
-      return 0;
-    }
-
-    // Convert the positive difference in milliseconds to days
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    Logger.log(`[DEBUG] calculateDeliveryDelay - Diff Days: ${diffDays}`);
-    return diffDays;
+  // If the difference is negative or zero, the package was not delayed.
+  if (diffTime <= 0) {
+    return 0;
   }
-  return null;
+
+  // Convert the positive difference in milliseconds to days
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  Logger.log(`[DEBUG] calculateDeliveryDelay - Diff Days: ${diffDays}`);
+  return diffDays;
 }
 
 /**
@@ -177,23 +171,19 @@ function calculateDeliveryDelay(order) {
  * @param {Object} order The Shopify order object.
  * @returns {number|null} The number of days since delivery or null.
  */
-function calculateDaysSinceDelivery(order) {
-  if (!order || !order.fulfillments || order.fulfillments.length === 0) return null;
-  const fulfillment = order.fulfillments[0];
+function calculateDaysSinceDelivery(order, fulfillment) { // Added fulfillment parameter
+  if (!fulfillment || fulfillment.shipment_status !== 'delivered' || !fulfillment.delivered_at) return null;
 
-  if (fulfillment.shipment_status === 'delivered' && fulfillment.delivered_at) {
-    const deliveredDate = new Date(fulfillment.delivered_at);
-    const today = new Date();
-    
-    // Reset time part to compare days accurately
-    deliveredDate.setHours(0, 0, 0, 0);
-    today.setHours(0, 0, 0, 0);
+  const deliveredDate = new Date(fulfillment.delivered_at);
+  const today = new Date();
+  
+  // Reset time part to compare days accurately
+  deliveredDate.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
 
-    const diffTime = today - deliveredDate;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  }
-  return null;
+  const diffTime = today - deliveredDate;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays;
 }
 
 // New helper function for formatting product details
@@ -215,4 +205,23 @@ function formatUnfulfilledItems(lineItems) {
   if (unfulfilled.length === 0) return null;
 
   return unfulfilled.map(item => `${item.fulfillable_quantity}x ${item.name} - SKU: ${item.sku || 'N/A'}`).join(',');
+}
+
+/**
+ * Obtiene y formatea las fechas de entrega y estimada de un fulfillment.
+ * @param {Object} fulfillment El objeto fulfillment de Shopify.
+ * @returns {Object} Un objeto con deliveredDateISO y estimatedDateISO, o null si no están disponibles.
+ */
+function getFormattedDeliveryDates(fulfillment) {
+  let deliveredDateISO = null;
+  let estimatedDateISO = null;
+
+  if (fulfillment.delivered_at) {
+    deliveredDateISO = new Date(fulfillment.delivered_at).toISOString();
+  }
+  if (fulfillment.estimated_delivery_at) {
+    estimatedDateISO = new Date(fulfillment.estimated_delivery_at).toISOString();
+  }
+
+  return { deliveredDateISO, estimatedDateISO };
 }

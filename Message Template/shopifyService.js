@@ -99,9 +99,21 @@ function getCustomerLatestOrderDetails(customerId) {
                 };
 
                 // Inyectar la fecha estimada en el objeto fulfillment para que personalizer.js la use
-                const eventWithEstimate = events.find(event => event.estimated_delivery_at);
-                if (eventWithEstimate) {
-                  fulfillment.estimated_delivery_at = eventWithEstimate.estimated_delivery_at;
+                // Priorizar la fecha estimada del último evento de seguimiento si está disponible
+                if (lastEvent.estimated_delivery_at) {
+                  fulfillment.estimated_delivery_at = lastEvent.estimated_delivery_at;
+                } else {
+                  // Si el último evento no tiene fecha estimada, buscar el evento más reciente (excluyendo el último) que sí la tenga
+                  let mostRecentEstimateEvent = null;
+                  for (let i = events.length - 2; i >= 0; i--) { // Iterar hacia atrás desde el penúltimo evento
+                    if (events[i].estimated_delivery_at) {
+                      mostRecentEstimateEvent = events[i];
+                      break; // Se encontró el más reciente, detener la búsqueda
+                    }
+                  }
+                  if (mostRecentEstimateEvent) {
+                    fulfillment.estimated_delivery_at = mostRecentEstimateEvent.estimated_delivery_at;
+                  }
                 }
                 
                 // Inyectamos la fecha de entrega en el objeto para que personalizer.js la pueda usar.

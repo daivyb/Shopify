@@ -4,7 +4,7 @@
 
 Este proyecto de Google Apps Script automatiza la generación de borradores de respuestas personalizadas en Gmail, utilizando la inteligencia artificial de Google Gemini y plantillas gestionadas en Notion. Está diseñado para optimizar el proceso de atención al cliente de Shopify, permitiendo al equipo responder de manera más rápida y consistente a diversas consultas y problemas de los clientes.
 
-El script analiza los correos electrónicos entrantes, clasifica su intención, enriquece el contexto con datos relevantes de Shopify (clientes, pedidos, estados de envío) y utiliza Gemini para seleccionar la plantilla de respuesta más adecuada. Finalmente, personaliza la plantilla y crea un borrador de correo electrónico listo para ser enviado.
+El script analiza los correos electrónicos entrantes, clasifica su intención, enriquece el contexto con datos detallados de Shopify (clientes, pedidos, estados de envío y de cumplimiento por cada envío) y utiliza Gemini para seleccionar la plantilla de respuesta más adecuada. Finalmente, personaliza la plantilla y crea un borrador de correo electrónico listo para ser enviado.
 
 ## Características
 
@@ -29,7 +29,8 @@ El script opera a través de la función principal `createDraftReplies`, que orq
 6.  **Construcción del Prompt para Gemini**: Se genera un prompt detallado para Gemini que incluye:
     *   El cuerpo del correo del cliente.
     *   Todas las plantillas de respuesta disponibles para la categoría clasificada.
-    *   Información completa del cliente y del último pedido de Shopify.
+    *   Información completa del cliente y del último pedido de Shopify, incluyendo el estado general de cumplimiento del pedido.
+    *   Detalles de **cada envío (fulfillment)**, incluyendo su estado, fechas de entrega y estimadas (en formato Shopify), y los días de retraso/transcurridos desde la entrega.
     *   Detalles del **último evento de seguimiento** del transportista (estado, mensaje, ubicación).
     *   Una lista de **todas las ubicaciones de Shopify** de la empresa.
     *   Reglas explícitas para la selección de plantillas, como priorizar respuestas proactivas para pedidos de un solo artículo o identificar devoluciones a almacenes.
@@ -69,17 +70,17 @@ Para que la personalización funcione, es esencial que las plantillas en Notion 
 | `{{customer_full_name}}`             | Nombre y apellido del cliente.                                                   | `John Doe`                                           |
 | `{{customer_email}}`                 | Correo electrónico del cliente.                                                  | `john.doe@example.com`                               |
 | `{{order_id}}`                       | Número del último pedido del cliente.                                            | `1051`                                               |
-| `{{order_date}}`                     | Fecha en que se creó el pedido.                                                  | `10/10/2025`                                         |
+| `{{order_date}}`                     | Fecha en que se creó el pedido.                                                  | `October 10, 2025`                                         |
 | `{{tracking_number}}`                | Número de seguimiento y URL del envío.                                           | `1Z999AA10123456789 (https://www.ups.com/track?...)` |
 | `{{order_items}}`                    | Lista de artículos en el pedido.                                                 | `1x Awesome T-Shirt, 2x Cool Mug`                    |
 | `{{delivery_status}}`                | Estado del envío (ej. `in_transit`, `delivered`).                                | `in_transit`                                         |
 | `{{carrier_name}}`                   | Nombre de la empresa de transporte.                                              | `UPS`                                                |
-| `{{expected_delivery_date}}`         | Fecha de entrega estimada proporcionada por el transportista.                    | `viernes, 17 de octubre de 2025`                     |
+| `{{expected_delivery_date}}`         | Fecha de entrega estimada proporcionada por el transportista, en formato legible y localizado. | `October 17, 2025`                     |
 | `{{delivery_location}}`              | Primera línea de la dirección de envío.                                          | `123 Main St`                                        |
-| `{{delivery_date}}`                  | Fecha en que se entregó el paquete.                                              | `15/10/2025`                                         |
+| `{{delivery_date}}`                  | Fecha en que se entregó el paquete, en formato legible y localizado.             | `October 15, 2025`                                         |
 | `{{shipping_address}}`               | Dirección de envío completa.                                                     | `123 Main St, Anytown, CA 12345, USA`                 |
-| `{{delivery_delay_days}}`            | Días de retraso entre la fecha estimada y la real.                               | `3`                                                  |
-| `{{days_since_delivery}}`            | Días transcurridos desde la entrega del paquete.                                 | `2`                                                  |
+| `{{delivery_delay_days}}`            | Días de retraso entre la fecha estimada y la real **para cada envío**.           | `3`                                                  |
+| `{{days_since_delivery}}`            | Días transcurridos desde la entrega del paquete **para cada envío**.             | `2`                                                  |
 | `{{product_details}}`                | Detalles de los productos (cantidad, nombre y SKU).                              | `1x Awesome T-Shirt (SKU: TSH-BL-L)`                 |
 | `{{product_quantity}}`               | Cantidades de los artículos del pedido.                                          | `1, 2`                                               |
 | `{{product_name}}`                   | Nombres de los artículos del pedido.                                             | `Awesome T-Shirt, Cool Mug`                          |
